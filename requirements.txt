@@ -1,0 +1,4 @@
+langchain-community==0.2.13
+markdownify==0.13.1
+langchain-chroma==0.1.4
+transformers==4.46.1
