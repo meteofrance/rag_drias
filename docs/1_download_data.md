@@ -23,15 +23,15 @@ python rag_drias/crawl.py --max_depth 3
 ```bash
 [ferreiram@dev-ia-mathilde rag_drias]$ runai exec python rag_drias/crawl.py
 --> json menu saved in /scratch/shared/Chatbot_DRIAS/text_data/Drias/getAllTopSectionsJson.json
-Number of pages downloaded : 219
-execution time : 606.8994297981262
+Number of pages downloaded : 213
+execution time : 252.1725
 ```
 - for a depth of 4 :
 ```bash
 [ferreiram@dev-ia-mathilde rag_drias]$ runai exec python rag_drias/crawl.py
 --> json menu saved in /scratch/shared/Chatbot_DRIAS/text_data/Drias/getAllTopSectionsJson.json
-Number of pages downloaded : 243
-execution time : 1113.4962704181671
+Number of pages downloaded : 242
+execution time : 268.90387
 ```
 
 
