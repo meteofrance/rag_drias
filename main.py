@@ -1,5 +1,6 @@
 import shutil
 from pathlib import Path
+import time
 from typing import List, Literal
 
 import torch
@@ -16,8 +17,9 @@ from sklearn.metrics.pairwise import cosine_similarity
 from tqdm import tqdm
 
 from rag_drias import data
+from rag_drias.crawler import scrape_page
 from rag_drias.embedding import TypeEmbedding, get_embedding
-from rag_drias.settings import PATH_DATA, PATH_VDB, PATH_LLM, PATH_RERANKER
+from rag_drias.settings import PATH_DATA, PATH_VDB, PATH_LLM, PATH_RERANKER, URLS
 
 if torch.cuda.is_available():
     device = torch.device("cuda")
@@ -144,17 +146,25 @@ def retrieve(
 
 @app.command()
 def prepare(
+    max_crawl_depth: int = 3,
     embedding_name: str = "Camembert",
-    data_source: str = "Confluence",
+    data_source: str = "Drias",
     overwrite: bool = False,
 ):
-    """Prepare the Chroma vector database by embedding all the text data.
+    """Prepare the Chroma vector database by crawling the URL and embedding all the text data.
 
     Args:
+        max_crawl_depth (int, optional): Maximum depth of the crawl. Defaults to 3.
         embedding_name (Camembert or E5): Embedding model name. Defaults to Camembert.
-        path_data (Path, optional): Name of the data source. Defaults to Confluence.
+        path_data (Path, optional): Name of the data source. Defaults to Drias.
         overwrite (bool, optional): Whether. Defaults to False.
     """
+
+    print(f"Start crawling {URLS[data_source]}")
+    start_time = time()
+    scrape_page(URLS[data_source], max_depth=max_crawl_depth)
+    print(f"Execution time : {time() - start_time}")
+
     path_data = PATH_DATA / data_source
     docs = data.create_docs(path_data)
     docs = data.split_to_paragraphs(docs)

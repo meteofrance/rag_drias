@@ -1,5 +1,9 @@
 from pathlib import Path
 
+URLS = {
+    "Drias": "https://www.drias-climat.fr",
+}
+
 PATH_SCRATCH = Path("/scratch/shared/Chatbot_DRIAS/")
 PATH_DATA = PATH_SCRATCH / "text_data"
 PATH_MENU_JSON = PATH_DATA / "Drias/getAllTopSectionsJson.json"

@@ -118,15 +118,3 @@ def scrape_page(start_url: str, max_depth: int = 3):
                         queue.append((full_url, depth + 1))
     print(f"Number of HTMLs pages downloaded : {len(visited)}")
     print(f"Number of PDFs downloaded : {len(visited_pdf)}")
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--max_depth", type=int, default=3)
-    args = parser.parse_args()
-    # URL of the home page
-    start_url = "https://www.drias-climat.fr"
-
-    start_time = time()
-    scrape_page(start_url, max_depth=args.max_depth)
-    print(f"execution time : {time() - start_time}")
