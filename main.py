@@ -161,9 +161,9 @@ def prepare(
     """
 
     print(f"Start crawling {URLS[data_source]}")
-    start_time = time()
+    start_time = time.time()
     scrape_page(URLS[data_source], max_depth=max_crawl_depth)
-    print(f"Execution time : {time() - start_time}")
+    print(f"Execution time : {time.time() - start_time}")
 
     path_data = PATH_DATA / data_source
     docs = data.create_docs(path_data)
