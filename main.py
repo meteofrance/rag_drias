@@ -91,27 +91,68 @@ def rerank(text: str, docs: List[Document], k: int = 4) -> List[Document]:
 
 
 def retrieve(
-    text: str,
-    embedding_name: str,
-    data_source: str,
-    n_samples: int,
-    use_rerank: bool,
+    text: str, embedding_name: str, n_samples: int, use_rerank: bool,
 ) -> List[Document]:
     """Retrieve the most relevant chunks in relation to the query."""
-    path_db = get_db_path(embedding_name, data_source)
+    path_db = get_db_path(embedding_name)
     embedding = get_embedding(embedding_name)
     vectordb = load_chroma_db(path_db, embedding)
 
     if use_rerank:
         chunks = vectordb.similarity_search(text, k=n_samples)
         chunks = rerank(text, chunks, k=n_samples // 2)
-        # we return the chunks by ascending score because better results when the relevant chunks are closer to the question
+        # we return the chunks by ascending score because we get better results
+        # when the relevant chunks are closer to the question
         chunks.reverse()
     else:
         chunks = vectordb.max_marginal_relevance_search(
             text, k=n_samples, fetch_k=int(n_samples * 1.5)
         )
     return chunks
+
+
+def get_prompt_message(question: str, retrieved_infos: str) -> List[dict]:
+    """Get the prompt message for the LLM, with or without retrieved chunks."""
+    if retrieved_infos != "":
+        message = [
+            {
+                "role": "system",
+                "content": "Le portail DRIAS mets à disposition les projections climatiques régionalisées de référence, pour l'adaptation en France. Tu es un chatbot qui reponds aux questions à l'aide d'informations récupérées sur le site.",
+            },
+            {
+                "role": "user",
+                "content": f"Avec les informations suivantes si utiles: {retrieved_infos}\nRéponds à cette question de manière claire et concise: {question}\nRéponse:",
+            },
+        ]
+    else:
+        message = [
+            {
+                "role": "system",
+                "content": "Le portail DRIAS mets à disposition les projections climatiques régionalisées de référence, pour l'adaptation en France. Tu es un chatbot qui reponds aux questions sur le site.",
+            },
+            {"role": "user", "content": f"Réponds à cette question: {question}"},
+        ]
+    return message
+
+
+def load_llm(generative_model: str) -> tuple:
+    """Load the LLM tokenizer and pipeline."""
+    path_llm = PATH_MODELS / generative_model
+    model = AutoModelForCausalLM.from_pretrained(
+        path_llm,
+        torch_dtype=torch.bfloat16,
+        trust_remote_code=True,  # Allow using code that was not written by HuggingFace
+    ).to(device)
+    tokenizer = AutoTokenizer.from_pretrained(path_llm)
+    pipeline = transformers.pipeline(
+        "text-generation",
+        model=model,
+        tokenizer=tokenizer,
+        torch_dtype=torch.bfloat16,
+        device=0,
+        pad_token_id=tokenizer.eos_token_id,
+    )
+    return tokenizer, pipeline
 
 
 # ----- Typer commands -----
@@ -147,8 +188,7 @@ def prepare_database(
 @app.command()
 def query(
     text: str,
-    embedding_name: str = "Camembert",
-    data_source: str = "Drias",
+    embedding_name: str = "sentence-camembert-large",
     n_samples: int = 4,
     use_rerank: bool = False,
 ):
@@ -159,7 +199,7 @@ def query(
         embedding_name (str, optional): Embedding model name. Defaults to "Camembert".
         data_source (str, optional): Name of the data source. Defaults to "Drias".
     """
-    chunks = retrieve(text, embedding_name, data_source, n_samples, use_rerank)
+    chunks = retrieve(text, embedding_name, n_samples, use_rerank)
     for i, chunk in enumerate(chunks):
         print(f"---> Relevant chunk {i} <---")
         data.print_doc(chunk)
@@ -168,64 +208,30 @@ def query(
 
 @app.command()
 def answer(
-    text: str,
-    embedding_model: str = "Camembert",
-    data_source: str = "Drias",
+    question: str,
+    embedding_model: str = "sentence-camembert-large",
     generative_model: str = "Chocolatine-14B-Instruct-4k-DPO",
     n_samples: int = 10,
     use_rag: bool = True,
     use_rerank: bool = False,
 ):
-    """Generate text from a prompt after rag and print it."""
+    """Generate answer to a question using RAG and print it."""
+    tokenizer, pipeline = load_llm(generative_model)
 
-    path_llm = PATH_MODELS / generative_model
-    model = AutoModelForCausalLM.from_pretrained(
-        path_llm,
-        torch_dtype=torch.bfloat16,
-        trust_remote_code=True,  # Allow using code that was not written by HuggingFace
-    ).to(device)
-    tokenizer = AutoTokenizer.from_pretrained(path_llm)
-
+    retrieved_infos = ""
     if use_rag:
-        chunks = retrieve(text, embedding_model, data_source, n_samples, use_rerank)
+        chunks = retrieve(question, embedding_model, n_samples, use_rerank)
 
-        retrieved_infos = ""
         for chunk in chunks:
             retrieved_infos += f"\n-- Page Title : {chunk.metadata['title']} --\n"
             retrieved_infos += f"-- url : {chunk.metadata['url']} --\n"
             retrieved_infos += chunk.page_content
 
-        message = [
-            {
-                "role": "system",
-                "content": "Le portail DRIAS mets à disposition les projections climatiques régionalisées de référence, pour l'adaptation en France. Tu es un chatbot qui reponds aux questions à l'aide d'informations récupérées sur le site.",
-            },
-            {
-                "role": "user",
-                "content": f"Avec les informations suivantes si utiles: {retrieved_infos}\nRéponds à cette question de manière claire et concise: {text}\nRéponse:",
-            },
-        ]
-    else:
-        message = [
-            {
-                "role": "system",
-                "content": "Le portail DRIAS mets à disposition les projections climatiques régionalisées de référence, pour l'adaptation en France. Tu es un chatbot qui reponds aux questions sur le site.",
-            },
-            {"role": "user", "content": f"Réponds à cette question: {text}"},
-        ]
-
+    message = get_prompt_message(question, retrieved_infos)
     prompt = tokenizer.apply_chat_template(
         message, add_generation_prompt=True, tokenize=False
     )
-
-    pipeline = transformers.pipeline(
-        "text-generation",
-        model=model,
-        tokenizer=tokenizer,
-        torch_dtype=torch.bfloat16,
-        device=0,
-        pad_token_id=tokenizer.eos_token_id,
-    )
+    print("#" * 50 + f"\nLLM input:\n{prompt}\n" + "#" * 50)
 
     sequences = pipeline(
         prompt,
@@ -234,8 +240,6 @@ def answer(
         num_return_sequences=1,
         max_new_tokens=500,
     )
-
-    print("#" * 50 + f"\nLLM input:\n{prompt}\n" + "#" * 50)
     print(f"LLM output:\n{sequences[0]['generated_text'][len(prompt):]}")
 
 
