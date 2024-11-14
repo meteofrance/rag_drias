@@ -47,19 +47,25 @@ If needed, see install instructions for [git-lfs](https://github.com/git-lfs/git
 
 ## Usage
 
-1. Prepare the vector database :
+1. Crawl the website :
 
 ```bash
-python main.py prepare
+python main.py crawl
 ```
 
-2. Make a query and retrieve the most relevant samples :
+2. Prepare the vector database :
+
+```bash
+python main.py prepare-database
+```
+
+3. Make a query and retrieve the most relevant samples :
 
 ```bash
 python main.py query "Quels formats de données sont disponibles pour le téléchargement sur DRIAS ?"
 ```
 
-3. Make a query and retrieve the answer :
+4. Make a query and retrieve the answer :
 
 ```bash
 python main.py answer "Quels formats de données sont disponibles pour le téléchargement sur DRIAS ?"

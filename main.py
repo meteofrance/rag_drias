@@ -28,12 +28,9 @@ app = typer.Typer(pretty_exceptions_enable=False)
 
 # ----- Chroma Database -----
 
-def get_db_path(
-    embedding_model: Literal["Camembert", "E5"] = "Camembert",
-    data_source: str = "Drias",
-) -> Path:
+def get_db_path(embedding_model: str = "sentence-camembert-large") -> Path:
     """Get path of the database."""
-    return PATH_VDB / f"{data_source}_{embedding_model}"
+    return PATH_VDB / embedding_model
 
 
 def create_chroma_db(
@@ -130,25 +127,20 @@ def crawl(max_depth: int = 3)-> None:
 
 @app.command()
 def prepare_database(
-    embedding_name: str = "Camembert",
-    data_source: str = "Drias",
-    overwrite: bool = False,
+    embedding_model: str = "sentence-camembert-large", overwrite: bool = False,
 ):
     """Prepare the Chroma vector database by chunking and embedding all the text data.
 
     Args:
-        embedding_name (Camembert or E5): Embedding model name. Defaults to Camembert.
-        path_data (Path, optional): Name of the data source. Defaults to Drias.
-        overwrite (bool, optional): Whether. Defaults to False.
+        embedding_model (Camembert or E5): Embedding model name. Defaults to Camembert.
+        overwrite (bool, optional): Whether to overwrite database. Defaults to False.
     """
-
-    path_data = PATH_DATA / data_source
-    docs = data.create_docs(path_data)
+    docs = data.create_docs(PATH_DATA)
     docs = data.split_to_paragraphs(docs)
     chunks = data.split_to_chunks(docs)
-    embedding = get_embedding(embedding_name)
+    embedding = get_embedding(embedding_model)
     chunks = data.filter_similar_chunks(chunks, embedding)
-    path_db = get_db_path(embedding_name, data_source)
+    path_db = get_db_path(embedding_model)
     create_chroma_db(path_db, embedding, chunks, overwrite)
 
 

@@ -9,5 +9,4 @@ SECTION_URL = f"{BASE_URL}/accompagnement/sections"
 PATH_DATA = BASE_PATH / "text_data"
 PATH_MENU_JSON = PATH_DATA / "getAllTopSectionsJson.json"
 PATH_VDB = BASE_PATH / "chroma_database"
-
-PATH_MODELS = Path("/scratch/shared/RAG/") / "hf_models"
+PATH_MODELS = BASE_PATH / "hf_models"
