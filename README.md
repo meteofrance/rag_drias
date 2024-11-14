@@ -45,6 +45,7 @@ If needed, see install instructions for [git-lfs](https://github.com/git-lfs/git
 5. Alternative Generation model Llama-3B (you will need a HuggingFace access token): ```git clone https://huggingface.co/meta-llama/Llama-3.2-3B-Instruct```
 6. Reranker model: ```git clone https://huggingface.co/BAAI/bge-reranker-v2-m3```
 
+
 ## Usage
 
 1. Crawl the website:
