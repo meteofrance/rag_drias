@@ -19,7 +19,7 @@ from tqdm import tqdm
 from rag_drias import data
 from rag_drias.crawler import scrape_page
 from rag_drias.embedding import TypeEmbedding, get_embedding
-from rag_drias.settings import PATH_DATA, PATH_VDB, PATH_LLM, PATH_RERANKER, URLS
+from rag_drias.settings import PATH_DATA, PATH_VDB, PATH_RERANKER, URLS, PATH_MODELS
 
 if torch.cuda.is_available():
     device = torch.device("cuda")
@@ -38,7 +38,7 @@ def chunks_similarity_filter(
     """Returns a list of chunks with a similarity below a threshold"""
     chunks_embeddings = [
         embedding.encode(chunk.page_content)
-        for chunk in tqdm(chunks, desc="filtering embedding")
+        for chunk in tqdm(chunks, desc="Embedding chunks for filtering")
     ]
     mat_sim = cosine_similarity(chunks_embeddings, chunks_embeddings)
     idx_to_remove = []
@@ -46,16 +46,16 @@ def chunks_similarity_filter(
         for j in range(i + 1, len(chunks)):
             if mat_sim[i, j] > threshold:
                 idx_to_remove.append(i)
-                continue
+                break
     unique_chunks = [chunks[i] for i in range(len(chunks)) if i not in idx_to_remove]
-    print(f"{len(unique_chunks)} unique chunks load")
+    print(f"{len(unique_chunks)} unique chunks loaded")
 
     return unique_chunks
 
 
 def get_db_path(
     embedding_model: Literal["Camembert", "E5"] = "Camembert",
-    data_source: str = "Confluence",
+    data_source: str = "Drias",
 ) -> Path:
     """Get path of the database."""
     return PATH_VDB / f"{data_source}_{embedding_model}"
@@ -72,13 +72,12 @@ def create_chroma_db(
         shutil.rmtree(path_db)
     path_db.mkdir(parents=True, exist_ok=True)
     if any(path_db.iterdir()):  # case overwrite = False
-        raise FileExistsError(f"Vector database directory {path_db} is not empty")
+        raise FileExistsError(f"Vector database directory {path_db} is not empty. Use 'overwrite' option if needed.")
     vectordb = Chroma.from_documents(
         documents=docs,
         embedding=embedding,
         persist_directory=str(path_db),  # Does not accept Path
     )
-    vectordb.persist()  # Save database to use it later
     print(f"Vector database created in {path_db}")
     return vectordb
 
@@ -179,7 +178,7 @@ def prepare(
 def query(
     text: str,
     embedding_name: str = "Camembert",
-    data_source: str = "Confluence",
+    data_source: str = "Drias",
     n_samples: int = 4,
     use_rerank: bool = False,
 ):
@@ -188,7 +187,7 @@ def query(
     Args:
         text (str): Your query.
         embedding_name (str, optional): Embedding model name. Defaults to "Camembert".
-        data_source (str, optional): Name of the data source. Defaults to "Confluence".
+        data_source (str, optional): Name of the data source. Defaults to "Drias".
     """
     chunks = retrieve(text, embedding_name, data_source, n_samples, use_rerank)
     for i, chunk in enumerate(chunks):
@@ -200,23 +199,25 @@ def query(
 @app.command()
 def answer(
     text: str,
-    embedding_name: str = "Camembert",
-    data_source: str = "Confluence",
+    embedding_model: str = "Camembert",
+    data_source: str = "Drias",
+    generative_model: str = "Chocolatine-14B-Instruct-4k-DPO",
     n_samples: int = 10,
     use_rag: bool = True,
     use_rerank: bool = False,
 ):
     """Generate text from a prompt after rag and print it."""
 
+    path_llm = PATH_MODELS / generative_model
     model = AutoModelForCausalLM.from_pretrained(
-        PATH_LLM,
+        path_llm,
         torch_dtype=torch.bfloat16,
         trust_remote_code=True,  # Allow using code that was not written by HuggingFace
     ).to(device)
-    tokenizer = AutoTokenizer.from_pretrained(PATH_LLM)
+    tokenizer = AutoTokenizer.from_pretrained(path_llm)
 
     if use_rag:
-        chunks = retrieve(text, embedding_name, data_source, n_samples, use_rerank)
+        chunks = retrieve(text, embedding_model, data_source, n_samples, use_rerank)
 
         retrieved_infos = ""
         for chunk in chunks:

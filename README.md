@@ -36,12 +36,14 @@ Build conda environment:
 
 You have to download manually the different models :
 
+If needed, see install instructions for [git-lfs](https://github.com/git-lfs/git-lfs?tab=readme-ov-file#getting-started).
+
 1. ```cd /my/large/folder/```
-2. ```git lfs install```
+2. ```git lfs install```  (should return `Git LFS initialized.`)
 3. Embedding model: ```git clone https://huggingface.co/dangvantuan/sentence-camembert-large```
-4. Generation model: ```git clone https://huggingface.co/jpacifico/Chocolatine-14B-Instruct-4k-DPO``` or
-```git clone https://huggingface.co/meta-llama/Llama-3.2-3B-Instruct```
-5. Reranker model: ```git clone https://huggingface.co/BAAI/bge-reranker-v2-m3```
+4. Generation model Chocolatine: ```git clone https://huggingface.co/jpacifico/Chocolatine-14B-Instruct-4k-DPO```
+5. Alternative Generation model Llama-3B (you will need a HuggingFace access token): ```git clone https://huggingface.co/meta-llama/Llama-3.2-3B-Instruct```
+6. Reranker model: ```git clone https://huggingface.co/BAAI/bge-reranker-v2-m3```
 
 ## Usage
 

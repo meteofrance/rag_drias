@@ -110,7 +110,7 @@ def scrape_page(start_url: str, max_depth: int = 3):
                 full_url = urllib.parse.urljoin(current_url, link["href"])
                 if domain in full_url and link["href"] != "/":
                     if full_url.endswith(".pdf"):
-                        # Download le pdf
+                        # Download pdf
                         download_pdf(full_url, visited_pdf)
                     # if no extension and not already visited
                     elif (len(full_url.split("/")[-1].split(".")) == 1) and (
