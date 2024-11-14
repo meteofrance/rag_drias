@@ -89,7 +89,8 @@ def scrape_page(start_url: str, max_depth: int = 3):
     while queue:
         current_url, depth = queue.popleft()
         # nothing to do if the depth is exceeded or the URL has already been visited
-        if depth > max_depth or current_url in visited:
+
+        if depth > max_depth or current_url.split("//")[-1] in visited:
             continue
 
         visited.add(current_url.split("//")[-1])
