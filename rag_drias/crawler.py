@@ -2,16 +2,14 @@ import urllib.parse
 import re
 import ssl
 import json
-import argparse
 
-from time import time
 from collections import deque
 from typing import List
 
 import requests
 from bs4 import BeautifulSoup
 
-from rag_drias.settings import PATH_DATA, PATH_MENU_JSON
+from rag_drias.settings import PATH_DATA, PATH_MENU_JSON, MENU_URL, SECTION_URL
 
 ssl._create_default_https_context = ssl._create_unverified_context
 
@@ -22,7 +20,7 @@ def save_html(content: str, url: str):
     clean_url = re.sub(r"^https?://", "", url)
     clean_url = re.sub(r"[/\\]", "_", clean_url)
     filename = f"{clean_url}.html"
-    save_path_html = PATH_DATA / "Drias/HTMLs"
+    save_path_html = PATH_DATA / "HTMLs"
     filepath = save_path_html / filename
 
     # Create the directory if necessary
@@ -44,7 +42,7 @@ def download_pdf(url: str, visited_pdf: List[str]):
     if response.status_code != 200:
         return
 
-    save_path_pdf = PATH_DATA / "Drias/PDFs"
+    save_path_pdf = PATH_DATA / "PDFs"
     filename = url.split("/")[-1]
     filepath = save_path_pdf / filename
 
@@ -60,31 +58,28 @@ def add_menu_to_queue(json_menu: List[dict], queue: deque, depth: int = 1):
     """Add the urls in the menu to the queue"""
     for section in json_menu:
         id = section["id"]
-        url = f"https://www.drias-climat.fr/accompagnement/sections/{id}"
+        url = f"{SECTION_URL}/{id}"
         queue.append((url, depth))
         if "children" in section:
             add_menu_to_queue(section["children"], queue, depth + 1)
 
 
-def scrape_page(start_url: str, max_depth: int = 3):
+def crawl_website(start_url: str, max_depth: int = 3):
     """Download htmls and pdfs from the home page"""
     domain = urllib.parse.urlparse(start_url).netloc
-    # init
     queue = deque([(start_url, 0)])
     visited = set()
     visited_pdf = set()
 
-    # main menu json
-    url_menu_json = f"{start_url}/accompagnement/getAllTopSectionsJson"
-
     # save the json main menu
-    response_json = requests.get(url_menu_json)
+    response_json = requests.get(MENU_URL)
     menu_json = response_json.json()
     with open(PATH_MENU_JSON, "w", encoding="utf-8") as file:
         json.dump(menu_json, file, ensure_ascii=False)
-    print(f"--> json menu saved in {PATH_MENU_JSON}")
+
     # add urls of the main menu in depth 1
     add_menu_to_queue(menu_json, queue)
+    print(f"{len(queue)} urls added to the queue")
 
     while queue:
         current_url, depth = queue.popleft()
@@ -110,7 +105,7 @@ def scrape_page(start_url: str, max_depth: int = 3):
                 full_url = urllib.parse.urljoin(current_url, link["href"])
                 if domain in full_url and link["href"] != "/":
                     if full_url.endswith(".pdf"):
-                        # Download le pdf
+                        # Download pdf
                         download_pdf(full_url, visited_pdf)
                     # if no extension and not already visited
                     elif (len(full_url.split("/")[-1].split(".")) == 1) and (
@@ -119,15 +114,3 @@ def scrape_page(start_url: str, max_depth: int = 3):
                         queue.append((full_url, depth + 1))
     print(f"Number of HTMLs pages downloaded : {len(visited)}")
     print(f"Number of PDFs downloaded : {len(visited_pdf)}")
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--max_depth", type=int, default=3)
-    args = parser.parse_args()
-    # URL of the home page
-    start_url = "https://www.drias-climat.fr"
-
-    start_time = time()
-    scrape_page(start_url, max_depth=args.max_depth)
-    print(f"execution time : {time() - start_time}")

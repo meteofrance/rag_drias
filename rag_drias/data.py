@@ -14,8 +14,10 @@ from langchain_text_splitters import MarkdownHeaderTextSplitter
 from markdownify import markdownify as md
 from tqdm import tqdm
 from bs4 import BeautifulSoup
+from sklearn.metrics.pairwise import cosine_similarity
 
 from rag_drias.settings import PATH_MENU_JSON
+from rag_drias.embedding import TypeEmbedding
 
 
 def replace_many_newlines(string: str) -> str:
@@ -217,6 +219,27 @@ def split_to_chunks(docs) -> list[str]:
     # TODO : add header to chunks
     print(f"{len(chunks)} chunks loaded")
     return chunks
+
+
+def filter_similar_chunks(
+    chunks: List[Document], embedding: TypeEmbedding, threshold: float = 0.98
+) -> List[Document]:
+    """Returns a list of chunks with a similarity below a threshold"""
+    chunks_embeddings = [
+        embedding.encode(chunk.page_content)
+        for chunk in tqdm(chunks, desc="Filtering chunks")
+    ]
+    mat_sim = cosine_similarity(chunks_embeddings, chunks_embeddings)
+    idx_to_remove = []
+    for i in range(len(chunks) - 1):
+        for j in range(i + 1, len(chunks)):
+            if mat_sim[i, j] > threshold:
+                idx_to_remove.append(i)
+                break
+    unique_chunks = [chunks[i] for i in range(len(chunks)) if i not in idx_to_remove]
+    print(f"{len(unique_chunks)} unique chunks loaded")
+
+    return unique_chunks
 
 
 def print_doc(doc: Document):

@@ -12,17 +12,16 @@ from transformers import (
     AutoModelForCausalLM,
     AutoModelForSequenceClassification,
 )
-from sklearn.metrics.pairwise import cosine_similarity
-from tqdm import tqdm
 
 from rag_drias import data
+from rag_drias.crawler import crawl_website
 from rag_drias.embedding import TypeEmbedding, get_embedding
-from rag_drias.settings import PATH_DATA, PATH_VDB, PATH_LLM, PATH_RERANKER
+from rag_drias.settings import PATH_DATA, PATH_VDB, BASE_URL, PATH_MODELS
 
 if torch.cuda.is_available():
     device = torch.device("cuda")
 else:
-    raise Exception("GPU non disponible.")
+    raise Exception("GPU not available.")
 
 app = typer.Typer(pretty_exceptions_enable=False)
 
@@ -30,33 +29,9 @@ app = typer.Typer(pretty_exceptions_enable=False)
 # ----- Chroma Database -----
 
 
-def chunks_similarity_filter(
-    chunks: List[Document], embedding: TypeEmbedding, threshold: float = 0.98
-) -> List[Document]:
-    """Returns a list of chunks with a similarity below a threshold"""
-    chunks_embeddings = [
-        embedding.encode(chunk.page_content)
-        for chunk in tqdm(chunks, desc="filtering embedding")
-    ]
-    mat_sim = cosine_similarity(chunks_embeddings, chunks_embeddings)
-    idx_to_remove = []
-    for i in range(len(chunks) - 1):
-        for j in range(i + 1, len(chunks)):
-            if mat_sim[i, j] > threshold:
-                idx_to_remove.append(i)
-                continue
-    unique_chunks = [chunks[i] for i in range(len(chunks)) if i not in idx_to_remove]
-    print(f"{len(unique_chunks)} unique chunks load")
-
-    return unique_chunks
-
-
-def get_db_path(
-    embedding_model: Literal["Camembert", "E5"] = "Camembert",
-    data_source: str = "Confluence",
-) -> Path:
+def get_db_path(embedding_model: str = "sentence-camembert-large") -> Path:
     """Get path of the database."""
-    return PATH_VDB / f"{data_source}_{embedding_model}"
+    return PATH_VDB / embedding_model
 
 
 def create_chroma_db(
@@ -70,13 +45,14 @@ def create_chroma_db(
         shutil.rmtree(path_db)
     path_db.mkdir(parents=True, exist_ok=True)
     if any(path_db.iterdir()):  # case overwrite = False
-        raise FileExistsError(f"Vector database directory {path_db} is not empty")
+        raise FileExistsError(
+            f"Vector database directory {path_db} is not empty. Use 'overwrite' option if needed."
+        )
     vectordb = Chroma.from_documents(
         documents=docs,
         embedding=embedding,
         persist_directory=str(path_db),  # Does not accept Path
     )
-    vectordb.persist()  # Save database to use it later
     print(f"Vector database created in {path_db}")
     return vectordb
 
@@ -87,10 +63,16 @@ def load_chroma_db(path_db: Path, embedding: TypeEmbedding):
     return Chroma(embedding_function=embedding, persist_directory=str(path_db))
 
 
-def rerank(text: str, docs: List[Document], k: int = 4) -> List[Document]:
+# ----- RAG -----
+
+
+def rerank(
+    model_name: str, text: str, docs: List[Document], k: int = 4
+) -> List[Document]:
     """Returns the k most relevant chunks for the question chosen by a reranker llm."""
-    rerank_tokenizer = AutoTokenizer.from_pretrained(PATH_RERANKER)
-    rerank_model = AutoModelForSequenceClassification.from_pretrained(PATH_RERANKER)
+    path_reranker = PATH_MODELS / model_name
+    rerank_tokenizer = AutoTokenizer.from_pretrained(path_reranker)
+    rerank_model = AutoModelForSequenceClassification.from_pretrained(path_reranker)
     rerank_model = rerank_model.to(device)
     rerank_model.eval()
 
@@ -118,19 +100,19 @@ def rerank(text: str, docs: List[Document], k: int = 4) -> List[Document]:
 def retrieve(
     text: str,
     embedding_name: str,
-    data_source: str,
     n_samples: int,
-    use_rerank: bool,
+    reranker: str = "",
 ) -> List[Document]:
     """Retrieve the most relevant chunks in relation to the query."""
-    path_db = get_db_path(embedding_name, data_source)
+    path_db = get_db_path(embedding_name)
     embedding = get_embedding(embedding_name)
     vectordb = load_chroma_db(path_db, embedding)
 
-    if use_rerank:
+    if reranker != "":
         chunks = vectordb.similarity_search(text, k=n_samples)
-        chunks = rerank(text, chunks, k=n_samples // 2)
-        # we return the chunks by ascending score because better results when the relevant chunks are closer to the question
+        chunks = rerank(reranker, text, chunks, k=n_samples // 2)
+        # we return the chunks by ascending score because we get better results
+        # when the relevant chunks are closer to the question
         chunks.reverse()
     else:
         chunks = vectordb.max_marginal_relevance_search(
@@ -139,81 +121,9 @@ def retrieve(
     return chunks
 
 
-# ----- Typer commands -----
-
-
-@app.command()
-def prepare(
-    embedding_name: str = "Camembert",
-    data_source: str = "Confluence",
-    overwrite: bool = False,
-):
-    """Prepare the Chroma vector database by embedding all the text data.
-
-    Args:
-        embedding_name (Camembert or E5): Embedding model name. Defaults to Camembert.
-        path_data (Path, optional): Name of the data source. Defaults to Confluence.
-        overwrite (bool, optional): Whether. Defaults to False.
-    """
-    path_data = PATH_DATA / data_source
-    docs = data.create_docs(path_data)
-    docs = data.split_to_paragraphs(docs)
-    chunks = data.split_to_chunks(docs)
-    embedding = get_embedding(embedding_name)
-    chunks = chunks_similarity_filter(chunks, embedding)
-    path_db = get_db_path(embedding_name, data_source)
-    create_chroma_db(path_db, embedding, chunks, overwrite)
-
-
-@app.command()
-def query(
-    text: str,
-    embedding_name: str = "Camembert",
-    data_source: str = "Confluence",
-    n_samples: int = 4,
-    use_rerank: bool = False,
-):
-    """Makes a query to the vector database and retrieves the closest chunks.
-
-    Args:
-        text (str): Your query.
-        embedding_name (str, optional): Embedding model name. Defaults to "Camembert".
-        data_source (str, optional): Name of the data source. Defaults to "Confluence".
-    """
-    chunks = retrieve(text, embedding_name, data_source, n_samples, use_rerank)
-    for i, chunk in enumerate(chunks):
-        print(f"---> Relevant chunk {i} <---")
-        data.print_doc(chunk)
-        print("-" * 20)
-
-
-@app.command()
-def answer(
-    text: str,
-    embedding_name: str = "Camembert",
-    data_source: str = "Confluence",
-    n_samples: int = 10,
-    use_rag: bool = True,
-    use_rerank: bool = False,
-):
-    """Generate text from a prompt after rag and print it."""
-
-    model = AutoModelForCausalLM.from_pretrained(
-        PATH_LLM,
-        torch_dtype=torch.bfloat16,
-        trust_remote_code=True,  # Allow using code that was not written by HuggingFace
-    ).to(device)
-    tokenizer = AutoTokenizer.from_pretrained(PATH_LLM)
-
-    if use_rag:
-        chunks = retrieve(text, embedding_name, data_source, n_samples, use_rerank)
-
-        retrieved_infos = ""
-        for chunk in chunks:
-            retrieved_infos += f"\n-- Page Title : {chunk.metadata['title']} --\n"
-            retrieved_infos += f"-- url : {chunk.metadata['url']} --\n"
-            retrieved_infos += chunk.page_content
-
+def get_prompt_message(question: str, retrieved_infos: str) -> List[dict]:
+    """Get the prompt message for the LLM, with or without retrieved chunks."""
+    if retrieved_infos != "":
         message = [
             {
                 "role": "system",
@@ -221,7 +131,7 @@ def answer(
             },
             {
                 "role": "user",
-                "content": f"Avec les informations suivantes si utiles: {retrieved_infos}\nRéponds à cette question de manière claire et concise: {text}\nRéponse:",
+                "content": f"Avec les informations suivantes si utiles: {retrieved_infos}\nRéponds à cette question de manière claire et concise: {question}\nRéponse:",
             },
         ]
     else:
@@ -230,13 +140,20 @@ def answer(
                 "role": "system",
                 "content": "Le portail DRIAS mets à disposition les projections climatiques régionalisées de référence, pour l'adaptation en France. Tu es un chatbot qui reponds aux questions sur le site.",
             },
-            {"role": "user", "content": f"Réponds à cette question: {text}"},
+            {"role": "user", "content": f"Réponds à cette question: {question}"},
         ]
+    return message
 
-    prompt = tokenizer.apply_chat_template(
-        message, add_generation_prompt=True, tokenize=False
-    )
 
+def load_llm(generative_model: str) -> tuple:
+    """Load the LLM tokenizer and pipeline."""
+    path_llm = PATH_MODELS / generative_model
+    model = AutoModelForCausalLM.from_pretrained(
+        path_llm,
+        torch_dtype=torch.bfloat16,
+        trust_remote_code=True,  # Allow using code that was not written by HuggingFace
+    ).to(device)
+    tokenizer = AutoTokenizer.from_pretrained(path_llm)
     pipeline = transformers.pipeline(
         "text-generation",
         model=model,
@@ -245,6 +162,88 @@ def answer(
         device=0,
         pad_token_id=tokenizer.eos_token_id,
     )
+    return tokenizer, pipeline
+
+
+# ----- Typer commands -----
+
+
+@app.command()
+def crawl(max_depth: int = 3) -> None:
+    """Crawl the Drias website and save the HTML pages."""
+    PATH_DATA.mkdir(parents=True, exist_ok=True)
+    print(f"Starting crawling {BASE_URL}")
+    print("This may take a while...")
+    crawl_website(BASE_URL, max_depth)
+
+
+@app.command()
+def prepare_database(
+    embedding_model: str = "sentence-camembert-large",
+    overwrite: bool = False,
+):
+    """Prepare the Chroma vector database by chunking and embedding all the text data.
+
+    Args:
+        embedding_model (Camembert or E5): Embedding model name. Defaults to Camembert.
+        overwrite (bool, optional): Whether to overwrite database. Defaults to False.
+    """
+    docs = data.create_docs(PATH_DATA)
+    docs = data.split_to_paragraphs(docs)
+    chunks = data.split_to_chunks(docs)
+    embedding = get_embedding(embedding_model)
+    chunks = data.filter_similar_chunks(chunks, embedding)
+    path_db = get_db_path(embedding_model)
+    create_chroma_db(path_db, embedding, chunks, overwrite)
+
+
+@app.command()
+def query(
+    text: str,
+    embedding_name: str = "sentence-camembert-large",
+    n_samples: int = 4,
+    use_rerank: bool = False,
+):
+    """Makes a query to the vector database and retrieves the closest chunks.
+
+    Args:
+        text (str): Your query.
+        embedding_name (str, optional): Embedding model name. Defaults to "Camembert".
+        data_source (str, optional): Name of the data source. Defaults to "Drias".
+    """
+    chunks = retrieve(text, embedding_name, n_samples, use_rerank)
+    for i, chunk in enumerate(chunks):
+        print(f"---> Relevant chunk {i} <---")
+        data.print_doc(chunk)
+        print("-" * 20)
+
+
+@app.command()
+def answer(
+    question: str,
+    embedding_model: str = "sentence-camembert-large",
+    generative_model: str = "Chocolatine-14B-Instruct-4k-DPO",
+    n_samples: int = 10,
+    use_rag: bool = True,
+    reranker: str = "",
+):
+    """Generate answer to a question using RAG and print it."""
+    tokenizer, pipeline = load_llm(generative_model)
+
+    retrieved_infos = ""
+    if use_rag:
+        chunks = retrieve(question, embedding_model, n_samples, reranker)
+
+        for chunk in chunks:
+            retrieved_infos += f"\n-- Page Title : {chunk.metadata['title']} --\n"
+            retrieved_infos += f"-- url : {chunk.metadata['url']} --\n"
+            retrieved_infos += chunk.page_content
+
+    message = get_prompt_message(question, retrieved_infos)
+    prompt = tokenizer.apply_chat_template(
+        message, add_generation_prompt=True, tokenize=False
+    )
+    print("#" * 50 + f"\nLLM input:\n{prompt}\n" + "#" * 50)
 
     sequences = pipeline(
         prompt,
@@ -253,8 +252,6 @@ def answer(
         num_return_sequences=1,
         max_new_tokens=500,
     )
-
-    print("#" * 50 + f"\nLLM input:\n{prompt}\n" + "#" * 50)
     print(f"LLM output:\n{sequences[0]['generated_text'][len(prompt):]}")
 
 

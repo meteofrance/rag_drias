@@ -1,4 +1,4 @@
-from typing import List, Literal, Union
+from typing import List, Union
 
 import numpy as np
 import torch
@@ -42,18 +42,18 @@ class Embedding(Embeddings):
         return self.encode(text)
 
 
-def get_embedding(model_name: Literal["Camembert", "E5"]):
-    if model_name == "Camembert":
+TypeEmbedding = Union[Embedding, HuggingFaceEmbeddings]
+
+
+def get_embedding(model_name: str = "sentence-camembert-large") -> TypeEmbedding:
+    if model_name == "sentence-camembert-large":
         print("Loading Camembert...")
-        return Embedding(PATH_MODELS / "sentence-camembert-large/")
+        return Embedding(PATH_MODELS / model_name)
     else:
         return HuggingFaceEmbeddings(
-            model_name=str(PATH_MODELS / "multilingual-e5-large"),
+            model_name=str(PATH_MODELS / model_name),
             model_kwargs={"device": "cuda"},
         )
-
-
-TypeEmbedding = Union[Embedding, HuggingFaceEmbeddings]
 
 
 def test_embedding(embedding: TypeEmbedding):
