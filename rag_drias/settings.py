@@ -1,13 +1,13 @@
 from pathlib import Path
 
-URLS = {
-    "Drias": "https://www.drias-climat.fr",
-}
+BASE_PATH = Path("/scratch/shared/rag_drias/")  # to be adapted by user
 
-PATH_SCRATCH = Path("/scratch/shared/Chatbot_DRIAS/")
-PATH_DATA = PATH_SCRATCH / "text_data"
-PATH_MENU_JSON = PATH_DATA / "Drias/getAllTopSectionsJson.json"
-PATH_VDB = PATH_SCRATCH / "chroma_database"
+BASE_URL = "https://www.drias-climat.fr"
+MENU_URL = f"{BASE_URL}/accompagnement/getAllTopSectionsJson"
+SECTION_URL = f"{BASE_URL}/accompagnement/sections"
+
+PATH_DATA = BASE_PATH / "text_data"
+PATH_MENU_JSON = PATH_DATA / "getAllTopSectionsJson.json"
+PATH_VDB = BASE_PATH / "chroma_database"
 
 PATH_MODELS = Path("/scratch/shared/RAG/") / "hf_models"
-PATH_RERANKER = PATH_SCRATCH / "hf_models" / "bge-reranker-v2-m3"

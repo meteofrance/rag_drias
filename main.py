@@ -1,6 +1,5 @@
 import shutil
 from pathlib import Path
-import time
 from typing import List, Literal
 
 import torch
@@ -13,45 +12,21 @@ from transformers import (
     AutoModelForCausalLM,
     AutoModelForSequenceClassification,
 )
-from sklearn.metrics.pairwise import cosine_similarity
-from tqdm import tqdm
 
 from rag_drias import data
-from rag_drias.crawler import scrape_page
+from rag_drias.crawler import crawl_website
 from rag_drias.embedding import TypeEmbedding, get_embedding
-from rag_drias.settings import PATH_DATA, PATH_VDB, PATH_RERANKER, URLS, PATH_MODELS
+from rag_drias.settings import PATH_DATA, PATH_VDB, BASE_URL, PATH_MODELS
 
 if torch.cuda.is_available():
     device = torch.device("cuda")
 else:
-    raise Exception("GPU non disponible.")
+    raise Exception("GPU not available.")
 
 app = typer.Typer(pretty_exceptions_enable=False)
 
 
 # ----- Chroma Database -----
-
-
-def chunks_similarity_filter(
-    chunks: List[Document], embedding: TypeEmbedding, threshold: float = 0.98
-) -> List[Document]:
-    """Returns a list of chunks with a similarity below a threshold"""
-    chunks_embeddings = [
-        embedding.encode(chunk.page_content)
-        for chunk in tqdm(chunks, desc="Embedding chunks for filtering")
-    ]
-    mat_sim = cosine_similarity(chunks_embeddings, chunks_embeddings)
-    idx_to_remove = []
-    for i in range(len(chunks) - 1):
-        for j in range(i + 1, len(chunks)):
-            if mat_sim[i, j] > threshold:
-                idx_to_remove.append(i)
-                break
-    unique_chunks = [chunks[i] for i in range(len(chunks)) if i not in idx_to_remove]
-    print(f"{len(unique_chunks)} unique chunks loaded")
-
-    return unique_chunks
-
 
 def get_db_path(
     embedding_model: Literal["Camembert", "E5"] = "Camembert",
@@ -87,6 +62,8 @@ def load_chroma_db(path_db: Path, embedding: TypeEmbedding):
         raise FileExistsError(f"Vector database {path_db} needs to be prepared.")
     return Chroma(embedding_function=embedding, persist_directory=str(path_db))
 
+
+# ----- RAG -----
 
 def rerank(text: str, docs: List[Document], k: int = 4) -> List[Document]:
     """Returns the k most relevant chunks for the question chosen by a reranker llm."""
@@ -142,34 +119,35 @@ def retrieve(
 
 # ----- Typer commands -----
 
+@app.command()
+def crawl(max_depth: int = 3)-> None:
+    """Crawl the Drias website and save the HTML pages."""
+    PATH_DATA.mkdir(parents=True, exist_ok=True)
+    print(f"Starting crawling {BASE_URL}")
+    print("This may take a while...")
+    crawl_website(BASE_URL, max_depth)
+
 
 @app.command()
-def prepare(
-    max_crawl_depth: int = 3,
+def prepare_database(
     embedding_name: str = "Camembert",
     data_source: str = "Drias",
     overwrite: bool = False,
 ):
-    """Prepare the Chroma vector database by crawling the URL and embedding all the text data.
+    """Prepare the Chroma vector database by chunking and embedding all the text data.
 
     Args:
-        max_crawl_depth (int, optional): Maximum depth of the crawl. Defaults to 3.
         embedding_name (Camembert or E5): Embedding model name. Defaults to Camembert.
         path_data (Path, optional): Name of the data source. Defaults to Drias.
         overwrite (bool, optional): Whether. Defaults to False.
     """
-
-    print(f"Start crawling {URLS[data_source]}")
-    start_time = time.time()
-    scrape_page(URLS[data_source], max_depth=max_crawl_depth)
-    print(f"Execution time : {time.time() - start_time}")
 
     path_data = PATH_DATA / data_source
     docs = data.create_docs(path_data)
     docs = data.split_to_paragraphs(docs)
     chunks = data.split_to_chunks(docs)
     embedding = get_embedding(embedding_name)
-    chunks = chunks_similarity_filter(chunks, embedding)
+    chunks = data.filter_similar_chunks(chunks, embedding)
     path_db = get_db_path(embedding_name, data_source)
     create_chroma_db(path_db, embedding, chunks, overwrite)
 
