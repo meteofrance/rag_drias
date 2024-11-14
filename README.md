@@ -27,23 +27,31 @@ Full code documentation of Rag_drias can be found here.
 
 ## Install
 
-```git clone https://github.com/meteofrance/rag_drias.git```
+1. ```git clone https://github.com/meteofrance/rag_drias.git```
 
-Build conda environment:
+2. Build conda environment:
 
-```conda env create --file environment.yaml```
-```conda activate ragdrias```
+```bash
+    conda env create --file environment.yaml
+    conda activate ragdrias
+```
 
-You have to download manually the different models :
+3. Change `BASE_PATH` in `rag_drias/settings.py`. This is where all your data and models will be saved.
+
+4. Download manually the different models :
 
 If needed, see install instructions for [git-lfs](https://github.com/git-lfs/git-lfs?tab=readme-ov-file#getting-started).
 
-1. ```cd /my/large/folder/```
-2. ```git lfs install```  (should return `Git LFS initialized.`)
-3. Embedding model: ```git clone https://huggingface.co/dangvantuan/sentence-camembert-large```
-4. Generation model Chocolatine: ```git clone https://huggingface.co/jpacifico/Chocolatine-14B-Instruct-4k-DPO```
-5. Alternative Generation model Llama-3B (you will need a HuggingFace access token): ```git clone https://huggingface.co/meta-llama/Llama-3.2-3B-Instruct```
-6. Reranker model: ```git clone https://huggingface.co/BAAI/bge-reranker-v2-m3```
+If needed, setup your HugginFace access token. (needed for Llama3B).
+
+```bash
+    cd <BASE_PATH>
+    git lfs install   # (should return `Git LFS initialized.`)
+    git clone https://huggingface.co/dangvantuan/sentence-camembert-large
+    git clone https://huggingface.co/jpacifico/Chocolatine-14B-Instruct-4k-DPO
+    git clone https://huggingface.co/meta-llama/Llama-3.2-3B-Instruct  # optionnal
+    git clone https://huggingface.co/BAAI/bge-reranker-v2-m3 # optionnal
+```
 
 
 ## Usage
