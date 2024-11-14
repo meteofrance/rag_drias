@@ -25,4 +25,4 @@ We chose this model because it is trained in French and well placed in the MTEB 
 ```bash
 python main.py prepare-database
 ```
-*Create a chroma database in /scratch/shared/rag_drias/chroma_database/sentence-camembert-large*
+*Create a chroma database in BASE_PATH/rag_drias/chroma_database/sentence-camembert-large*

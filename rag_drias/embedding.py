@@ -1,4 +1,4 @@
-from typing import List, Literal, Union
+from typing import List, Union
 
 import numpy as np
 import torch
@@ -44,7 +44,8 @@ class Embedding(Embeddings):
 
 TypeEmbedding = Union[Embedding, HuggingFaceEmbeddings]
 
-def get_embedding(model_name: str= "sentence-camembert-large") -> TypeEmbedding:
+
+def get_embedding(model_name: str = "sentence-camembert-large") -> TypeEmbedding:
     if model_name == "sentence-camembert-large":
         print("Loading Camembert...")
         return Embedding(PATH_MODELS / model_name)

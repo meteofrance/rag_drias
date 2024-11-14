@@ -28,6 +28,7 @@ app = typer.Typer(pretty_exceptions_enable=False)
 
 # ----- Chroma Database -----
 
+
 def get_db_path(embedding_model: str = "sentence-camembert-large") -> Path:
     """Get path of the database."""
     return PATH_VDB / embedding_model
@@ -44,7 +45,9 @@ def create_chroma_db(
         shutil.rmtree(path_db)
     path_db.mkdir(parents=True, exist_ok=True)
     if any(path_db.iterdir()):  # case overwrite = False
-        raise FileExistsError(f"Vector database directory {path_db} is not empty. Use 'overwrite' option if needed.")
+        raise FileExistsError(
+            f"Vector database directory {path_db} is not empty. Use 'overwrite' option if needed."
+        )
     vectordb = Chroma.from_documents(
         documents=docs,
         embedding=embedding,
@@ -61,6 +64,7 @@ def load_chroma_db(path_db: Path, embedding: TypeEmbedding):
 
 
 # ----- RAG -----
+
 
 def rerank(text: str, docs: List[Document], k: int = 4) -> List[Document]:
     """Returns the k most relevant chunks for the question chosen by a reranker llm."""
@@ -91,7 +95,10 @@ def rerank(text: str, docs: List[Document], k: int = 4) -> List[Document]:
 
 
 def retrieve(
-    text: str, embedding_name: str, n_samples: int, use_rerank: bool,
+    text: str,
+    embedding_name: str,
+    n_samples: int,
+    use_rerank: bool,
 ) -> List[Document]:
     """Retrieve the most relevant chunks in relation to the query."""
     path_db = get_db_path(embedding_name)
@@ -157,8 +164,9 @@ def load_llm(generative_model: str) -> tuple:
 
 # ----- Typer commands -----
 
+
 @app.command()
-def crawl(max_depth: int = 3)-> None:
+def crawl(max_depth: int = 3) -> None:
     """Crawl the Drias website and save the HTML pages."""
     PATH_DATA.mkdir(parents=True, exist_ok=True)
     print(f"Starting crawling {BASE_URL}")
@@ -168,7 +176,8 @@ def crawl(max_depth: int = 3)-> None:
 
 @app.command()
 def prepare_database(
-    embedding_model: str = "sentence-camembert-large", overwrite: bool = False,
+    embedding_model: str = "sentence-camembert-large",
+    overwrite: bool = False,
 ):
     """Prepare the Chroma vector database by chunking and embedding all the text data.
 

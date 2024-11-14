@@ -15,9 +15,9 @@ The crawler has a max_depth argument which corresponds to the maximum depth rela
 ```bash
 python main.py crawl --max-depth 3
 ```
-*By default max_depth=3 and files are saved in /scratch/shared/rag_drias/text_data*
+*By default max_depth=3 and files are saved in BASE_PATH/rag_drias/text_data*
 
-241 HTML pages and 44 PDFs should be downloaded in `/scratch/shared/rag_drias/text_data`.
+241 HTML pages and 44 PDFs should be downloaded in `BASE_PATH/rag_drias/text_data`.
 
 ### Exemple
 
