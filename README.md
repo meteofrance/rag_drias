@@ -80,6 +80,13 @@ python main.py query "Quels formats de données sont disponibles pour le téléc
 python main.py answer "Quels formats de données sont disponibles pour le téléchargement sur DRIAS ?"
 ```
 
+add reranker model :
+
+```bash
+python main.py answer "Quels formats de données sont disponibles pour le téléchargement sur DRIAS ?" --reranker bge-reranker-v2-m3
+```
+
+
 5. To see what the LLM would answer without the retrieved chunks:
 
 ```bash

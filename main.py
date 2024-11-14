@@ -66,10 +66,13 @@ def load_chroma_db(path_db: Path, embedding: TypeEmbedding):
 # ----- RAG -----
 
 
-def rerank(text: str, docs: List[Document], k: int = 4) -> List[Document]:
+def rerank(
+    model_name: str, text: str, docs: List[Document], k: int = 4
+) -> List[Document]:
     """Returns the k most relevant chunks for the question chosen by a reranker llm."""
-    rerank_tokenizer = AutoTokenizer.from_pretrained(PATH_RERANKER)
-    rerank_model = AutoModelForSequenceClassification.from_pretrained(PATH_RERANKER)
+    path_reranker = PATH_MODELS / model_name
+    rerank_tokenizer = AutoTokenizer.from_pretrained(path_reranker)
+    rerank_model = AutoModelForSequenceClassification.from_pretrained(path_reranker)
     rerank_model = rerank_model.to(device)
     rerank_model.eval()
 
@@ -98,16 +101,16 @@ def retrieve(
     text: str,
     embedding_name: str,
     n_samples: int,
-    use_rerank: bool,
+    reranker: str = "",
 ) -> List[Document]:
     """Retrieve the most relevant chunks in relation to the query."""
     path_db = get_db_path(embedding_name)
     embedding = get_embedding(embedding_name)
     vectordb = load_chroma_db(path_db, embedding)
 
-    if use_rerank:
+    if reranker != "":
         chunks = vectordb.similarity_search(text, k=n_samples)
-        chunks = rerank(text, chunks, k=n_samples // 2)
+        chunks = rerank(reranker, text, chunks, k=n_samples // 2)
         # we return the chunks by ascending score because we get better results
         # when the relevant chunks are closer to the question
         chunks.reverse()
@@ -222,14 +225,14 @@ def answer(
     generative_model: str = "Chocolatine-14B-Instruct-4k-DPO",
     n_samples: int = 10,
     use_rag: bool = True,
-    use_rerank: bool = False,
+    reranker: str = "",
 ):
     """Generate answer to a question using RAG and print it."""
     tokenizer, pipeline = load_llm(generative_model)
 
     retrieved_infos = ""
     if use_rag:
-        chunks = retrieve(question, embedding_model, n_samples, use_rerank)
+        chunks = retrieve(question, embedding_model, n_samples, reranker)
 
         for chunk in chunks:
             retrieved_infos += f"\n-- Page Title : {chunk.metadata['title']} --\n"
