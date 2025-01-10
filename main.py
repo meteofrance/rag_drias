@@ -1,6 +1,6 @@
 import shutil
 from pathlib import Path
-from typing import List, Literal
+from typing import List
 
 import torch
 import typer
@@ -23,16 +23,19 @@ if torch.cuda.is_available():
 else:
     raise Exception("GPU not available.")
 
-# --- Add cache if streamlit is used ---
+# --- Streamlit ---
+
 import streamlit as st
 import os
 
+
 def cache_resource(func):
-    """Cache function if streamlit is used."""
+    """Cache the resource if the function is called by a streamlit environment."""
     IS_STREAMLIT = os.getenv("IS_STREAMLIT", False)
     if IS_STREAMLIT:
         return st.cache_resource(func)
     return func
+
 
 app = typer.Typer(pretty_exceptions_enable=False)
 
@@ -67,8 +70,10 @@ def create_chroma_db(
     print(f"Vector database created in {path_db}")
     return vectordb
 
+
 @cache_resource
 def load_chroma_db(embedding_name: str):
+    """Load the Chroma vector database."""
     path_db = get_db_path(embedding_name)
     embedding = get_embedding(embedding_name)
     if not (path_db.exists() and any(path_db.iterdir())):
@@ -77,6 +82,7 @@ def load_chroma_db(embedding_name: str):
 
 
 # ----- RAG -----
+
 
 @cache_resource
 def load_reranker(model_name: str):
@@ -87,6 +93,7 @@ def load_reranker(model_name: str):
     rerank_model = rerank_model.to(device)
     rerank_model.eval()
     return rerank_tokenizer, rerank_model
+
 
 def rerank(
     model_name: str, text: str, docs: List[Document], k: int = 4
@@ -158,6 +165,7 @@ def get_prompt_message(question: str, retrieved_infos: str) -> List[dict]:
         ]
     return message
 
+
 @cache_resource
 def load_llm(generative_model: str) -> tuple:
     """Load the LLM tokenizer and pipeline."""
@@ -177,6 +185,7 @@ def load_llm(generative_model: str) -> tuple:
         pad_token_id=tokenizer.eos_token_id,
     )
     return tokenizer, pipeline
+
 
 # ----- Typer commands -----
 
@@ -246,7 +255,7 @@ def answer(
     tokenizer, pipeline = load_llm(generative_model)
 
     retrieved_infos = ""
-    if use_rag:        
+    if use_rag:
         vectordb = load_chroma_db(embedding_model)
         chunks = retrieve(question, vectordb, n_samples, reranker)
 
@@ -269,7 +278,7 @@ def answer(
         max_new_tokens=500,
     )
     print(f"LLM output:\n{sequences[0]['generated_text'][len(prompt):]}")
-    return sequences[0]["generated_text"][len(prompt):]
+    return sequences[0]["generated_text"][len(prompt) :]
 
 
 if __name__ == "__main__":

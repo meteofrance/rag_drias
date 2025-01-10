@@ -1,12 +1,11 @@
 import streamlit as st
 import os
 
-# add IS_STREAMLIT to the environment
+# Add IS_STREAMLIT to the environment
 os.environ["IS_STREAMLIT"] = "True"
 from main import answer
 
 correct_password = st.secrets["general"]["password"]
-
 
 # Password protection
 password = st.text_input("Password", type="password")
@@ -39,16 +38,14 @@ if prompt := st.chat_input("What is up?"):
 
     # Streamed response emulator
     def response_generator():
-
         response = answer(
             prompt,
-            n_samples= 10,
+            n_samples=10,
             use_rag=True,
             reranker="bge-reranker-v2-m3",
         )
-        
-        yield response
 
+        yield response
 
     # Display assistant response in chat message container
     with st.chat_message("assistant"):
