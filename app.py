@@ -19,6 +19,23 @@ else:
 
 st.title("💬☀️ Chatbot DRIAS")
 
+
+# Sidebar
+st.sidebar.title("Parameters")
+
+n_samples = st.sidebar.slider(
+    "Number of retrieved chunks :", min_value=5, max_value=100, value=30
+)
+use_rag = st.sidebar.checkbox("Use rag", value=True)
+
+generative_model = st.sidebar.selectbox(
+    "Choose a generative model:",
+    ["Llama-3.2-3B-Instruct", "Chocolatine-3B-Instruct-DPO-v1.0"],
+)
+reranker_model = st.sidebar.selectbox(
+    "Choose a reranker model:", ["", "bge-reranker-v2-m3"]
+)
+
 # Initialize chat history
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -40,9 +57,10 @@ if prompt := st.chat_input("What is up?"):
     def response_generator():
         response = answer(
             prompt,
-            n_samples=10,
-            use_rag=True,
-            reranker="bge-reranker-v2-m3",
+            generative_model=generative_model,
+            n_samples=n_samples,
+            use_rag=use_rag,
+            reranker=reranker_model,
         )
 
         yield response
