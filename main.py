@@ -202,7 +202,7 @@ def query(
     text: str,
     embedding_name: str = "sentence-camembert-large",
     n_samples: int = 4,
-    use_rerank: bool = False,
+    reranker: str = "",
 ):
     """Makes a query to the vector database and retrieves the closest chunks.
 
@@ -211,7 +211,7 @@ def query(
         embedding_name (str, optional): Embedding model name. Defaults to "Camembert".
         data_source (str, optional): Name of the data source. Defaults to "Drias".
     """
-    chunks = retrieve(text, embedding_name, n_samples, use_rerank)
+    chunks = retrieve(text, embedding_name, n_samples, reranker)
     for i, chunk in enumerate(chunks):
         print(f"---> Relevant chunk {i} <---")
         data.print_doc(chunk)
@@ -222,7 +222,7 @@ def query(
 def answer(
     question: str,
     embedding_model: str = "sentence-camembert-large",
-    generative_model: str = "Chocolatine-14B-Instruct-4k-DPO",
+    generative_model: str = "Llama-3.2-3B-Instruct",
     n_samples: int = 10,
     use_rag: bool = True,
     reranker: str = "",
@@ -253,6 +253,7 @@ def answer(
         max_new_tokens=500,
     )
     print(f"LLM output:\n{sequences[0]['generated_text'][len(prompt):]}")
+    return sequences[0]["generated_text"][len(prompt):]
 
 
 if __name__ == "__main__":
