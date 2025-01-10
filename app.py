@@ -1,7 +1,9 @@
 import streamlit as st
-from main import answer
-import time
+import os
 
+# add IS_STREAMLIT to the environment
+os.environ["IS_STREAMLIT"] = "True"
+from main import answer
 
 correct_password = st.secrets["general"]["password"]
 
