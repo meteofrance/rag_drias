@@ -33,7 +33,7 @@ def cache_resource(func):
     """Cache the resource if the function is called by a streamlit environment."""
     IS_STREAMLIT = os.getenv("IS_STREAMLIT", False)
     if IS_STREAMLIT:
-        return st.cache_resource(func)
+        return st.cache_resource(func, ttl=3600)
     return func
 
 
