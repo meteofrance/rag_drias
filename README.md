@@ -4,6 +4,8 @@ Our goal is to make a Retrieval Augmented Generation (RAG) on the [DRIAS portal]
 
 >LLMs used in specialized fields may create hallucinations due to their lack of knowledge. RAG helps solve this problem by retrieving relevant documents from external knowledge bases.
 
+![homepage](docs/images/home.PNG)
+
 ## Repository Structure
 ```
 rag_drias
