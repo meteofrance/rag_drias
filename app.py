@@ -35,7 +35,7 @@ else:
     st.title("💬☀️ Chatbot DRIAS")
 
     st.write(
-        "Bienvenue sur le chatbot DRIAS, un assistant virtuel qui vous aidera à trouver des informations en se basant sur les données de du site [DRIAS](https://www.drias-climat.fr/).\n\nLorsque l'option *use rag* est activée le chatbot va parcourir l'ensemble des textes présents sur le site, et identifie un nombre *Number of retrieved chunks* de paragraphes qui ont l'air pertinents pour répondre à la question. Puis une instruction sera donnée au *generative model*: \"voici des documents : [paragraphe 1], [paragraphe 2], etc. A partir de ces documents, répond à la question : [question utilisateur]\".\n\nPour commencer, selectionnez les paramètres de votre choix dans la barre latérale puis posez votre question dans la zone de texte ci-dessous."
+        "Bienvenue sur le chatbot DRIAS, un assistant virtuel qui vous aidera à trouver des informations en se basant sur les données du site [DRIAS](https://www.drias-climat.fr/).\n\nLorsque l'option *use rag* est activée, le chatbot va parcourir l'ensemble des textes présents sur le site et identifie un nombre *Number of retrieved chunks* de paragraphes qui ont l'air pertinents pour répondre à la question. Puis une instruction sera donnée au *generative model*: \"voici des documents : [paragraphe 1], [paragraphe 2], etc. A partir de ces documents, répond à la question : [question utilisateur]\".\n\nPour commencer, sélectionnez les paramètres de votre choix dans la barre latérale puis posez votre question dans la zone de texte ci-dessous."
     )
 
     # Sidebar
