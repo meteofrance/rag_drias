@@ -2,7 +2,7 @@ from pathlib import Path
 
 from langchain_core.documents.base import Document
 
-from main import answer, prepare_database, query, rerank
+from main import answer, create_chroma_db, query, rerank
 from rag_drias.data import filter_similar_chunks
 from rag_drias.embedding import get_embedding
 
@@ -28,20 +28,20 @@ CHUNKS = [
     ),
 ]
 
-prepare_database(CHUNKS, "sentence-camembert-large", PATH_DB)
+create_chroma_db(PATH_DB, "dangvantuan/sentence-camembert-large", CHUNKS)
 
 
 def test_similarity():
-    embedding = get_embedding("sentence-camembert-large")
+    embedding = get_embedding("dangvantuan/sentence-camembert-large")
     unique_chunks = filter_similar_chunks(CHUNKS, embedding, threshold=0.98)
     assert len(unique_chunks) == 3
 
 
 def test_reranker():
-    embedding = get_embedding("sentence-camembert-large")
+    embedding = get_embedding("dangvantuan/sentence-camembert-large")
     unique_chunks = filter_similar_chunks(CHUNKS, embedding, threshold=0.98)
     ranking_chunks = rerank(
-        model_name="bge-reranker-v2-m3",
+        model_name="BAAI/bge-reranker-v2-m3",
         text="Qu'es-ce qu'un chat ?",
         docs=unique_chunks,
         k=3,
