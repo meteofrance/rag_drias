@@ -89,7 +89,8 @@ def test_answer():
     )
     assert (
         response
-        == "Un chat est un animal domestique de la famille des félidés, connu pour sa capacité à dormir, manger et jouer."
+        == "Un chat est un animal domestique de la famille des félidés,\
+             connu pour sa capacité à dormir, manger et jouer."
     )
 
 
