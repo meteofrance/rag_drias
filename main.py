@@ -3,20 +3,20 @@ from pathlib import Path
 from typing import List
 
 import torch
+import transformers
 import typer
 from langchain_chroma import Chroma
 from langchain_core.documents.base import Document
-import transformers
 from transformers import (
-    AutoTokenizer,
     AutoModelForCausalLM,
     AutoModelForSequenceClassification,
+    AutoTokenizer,
 )
 
 from rag_drias import data
 from rag_drias.crawler import crawl_website
 from rag_drias.embedding import TypeEmbedding, get_embedding
-from rag_drias.settings import PATH_DATA, PATH_VDB, BASE_URL, PATH_MODELS
+from rag_drias.settings import BASE_URL, PATH_DATA, PATH_MODELS, PATH_VDB
 
 if torch.cuda.is_available():
     device = torch.device("cuda")
@@ -25,8 +25,9 @@ else:
 
 # --- Streamlit ---
 
-import streamlit as st
 import os
+
+import streamlit as st
 
 
 def cache_resource(func):

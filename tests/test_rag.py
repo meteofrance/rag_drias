@@ -1,8 +1,10 @@
-from langchain_core.documents.base import Document
-from rag_drias.embedding import get_embedding
-from main import rerank, query, answer
-from rag_drias.data import filter_similar_chunks
 from pathlib import Path
+
+from langchain_core.documents.base import Document
+
+from main import answer, query, rerank
+from rag_drias.data import filter_similar_chunks
+from rag_drias.embedding import get_embedding
 
 PATH_DB = Path(
     "/scratch/shared/rag_drias/tests/chroma_database/sentence-camembert-large"

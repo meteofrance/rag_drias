@@ -1,5 +1,6 @@
-import streamlit as st
 import os
+
+import streamlit as st
 
 # Add IS_STREAMLIT to the environment
 os.environ["IS_STREAMLIT"] = "True"

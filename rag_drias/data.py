@@ -1,8 +1,9 @@
-import re
 import json
+import re
 from pathlib import Path
 from typing import List
 
+from bs4 import BeautifulSoup
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import (
     DirectoryLoader,
@@ -12,12 +13,11 @@ from langchain_community.document_loaders import (
 from langchain_core.documents.base import Document
 from langchain_text_splitters import MarkdownHeaderTextSplitter
 from markdownify import markdownify as md
-from tqdm import tqdm
-from bs4 import BeautifulSoup
 from sklearn.metrics.pairwise import cosine_similarity
+from tqdm import tqdm
 
-from rag_drias.settings import PATH_MENU_JSON
 from rag_drias.embedding import TypeEmbedding
+from rag_drias.settings import PATH_MENU_JSON
 
 
 def replace_many_newlines(string: str) -> str:
