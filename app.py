@@ -66,7 +66,8 @@ else:
     generative_model = st.sidebar.selectbox(
         "Choose a generative model:",
         ["Llama-3.2-3B-Instruct", "Chocolatine-3B-Instruct-DPO-v1.0"],
-        help="Modèle de génération de texte utilisé pour répondre aux questions. \nLLama-3.2-3B-Instruct est recommandé.",
+        help="Modèle de génération de texte utilisé pour répondre aux questions. \nLLama-3.2-3B-Instruct\
+             est recommandé.",
     )
     reranker_model = st.sidebar.selectbox(
         "Choose a reranker model:",

@@ -125,10 +125,10 @@ def clean_drias_doc(doc_str: str) -> str:
     if doc_str == "Expired session":
         doc_str = ""
 
-    doc_str = doc_str.replace("\-", "-")
-    doc_str = doc_str.replace("\_", "_")
-    doc_str = doc_str.replace("\[", "[")
-    doc_str = doc_str.replace("**", "")
+    doc_str = doc_str.replace(r"\-", "-")
+    doc_str = doc_str.replace(r"\_", "_")
+    doc_str = doc_str.replace(r"\[", "[")
+    doc_str = doc_str.replace(r"**", "")
 
     lines = doc_str.split("\n")
     for i, line in enumerate(lines):
@@ -245,3 +245,7 @@ def filter_similar_chunks(
 def print_doc(doc: Document):
     print(f"-- Page Title : {doc.metadata['title']} ---")
     print(doc.page_content)
+
+if __name__ == "__main__":
+    doc = create_docs_html(Path("/scratch/shared/rag_drias/text_data/tests/HTMLs"))
+    print_doc(doc[0])
