@@ -72,9 +72,10 @@ def create_chroma_db(
 
 
 @cache_resource
-def load_chroma_db(embedding_name: str):
+def load_chroma_db(embedding_name: str, path_db: Path = None) -> Chroma:
     """Load the Chroma vector database."""
-    path_db = get_db_path(embedding_name)
+    if path_db is None:
+        path_db = get_db_path(embedding_name)
     embedding = get_embedding(embedding_name)
     if not (path_db.exists() and any(path_db.iterdir())):
         raise FileExistsError(f"Vector database {path_db} needs to be prepared.")
@@ -225,6 +226,7 @@ def query(
     embedding_name: str = "sentence-camembert-large",
     n_samples: int = 4,
     reranker: str = "",
+    path_db: Path = None,
 ):
     """Makes a query to the vector database and retrieves the closest chunks.
 
@@ -233,12 +235,13 @@ def query(
         embedding_name (str, optional): Embedding model name. Defaults to "Camembert".
         data_source (str, optional): Name of the data source. Defaults to "Drias".
     """
-    vectordb = load_chroma_db(embedding_name)
+    vectordb = load_chroma_db(embedding_name, path_db)
     chunks = retrieve(text, vectordb, n_samples, reranker)
     for i, chunk in enumerate(chunks):
         print(f"---> Relevant chunk {i} <---")
         data.print_doc(chunk)
         print("-" * 20)
+    return chunks
 
 
 @app.command()
@@ -249,6 +252,7 @@ def answer(
     n_samples: int = 10,
     use_rag: bool = True,
     reranker: str = "",
+    path_db: Path = None,
 ):
     """Generate answer to a question using RAG and print it."""
 
@@ -256,7 +260,7 @@ def answer(
 
     retrieved_infos = ""
     if use_rag:
-        vectordb = load_chroma_db(embedding_model)
+        vectordb = load_chroma_db(embedding_model, path_db)
         chunks = retrieve(question, vectordb, n_samples, reranker)
 
         for chunk in chunks:
