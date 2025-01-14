@@ -2,12 +2,12 @@ from pathlib import Path
 
 from langchain_core.documents.base import Document
 
-from main import answer, query, rerank
+from main import answer, query, rerank, prepare_database
 from rag_drias.data import filter_similar_chunks
 from rag_drias.embedding import get_embedding
 
 PATH_DB = Path(
-    "/scratch/shared/rag_drias/tests/chroma_database/sentence-camembert-large"
+    "tmp/"
 )
 
 CHUNKS = [
@@ -29,6 +29,8 @@ CHUNKS = [
         metadata={"title": "Chat", "url": "https://chat.com"},
     ),
 ]
+
+prepare_database(CHUNKS, "sentence-camembert-large", PATH_DB)
 
 
 def test_similarity():
@@ -57,7 +59,7 @@ def test_query():
     # Without reranker
     retrieved_chunks = query(
         text="Qu'es-ce qu'un chat ?",
-        embedding_name="sentence-camembert-large",
+        embedding_name="dangvantuan/sentence-camembert-large",
         n_samples=3,
         path_db=PATH_DB,
     )
@@ -71,9 +73,9 @@ def test_query():
     # With reranker
     retrieved_chunks = query(
         text="Qu'es-ce qu'un chat ?",
-        embedding_name="sentence-camembert-large",
+        embedding_name="dangvantuan/sentence-camembert-large",
         n_samples=4,
-        reranker="bge-reranker-v2-m3",
+        reranker="BAAI/bge-reranker-v2-m3",
         path_db=PATH_DB,
     )
     assert retrieved_chunks[0] == CHUNKS[3] and retrieved_chunks[1] == CHUNKS[1]
@@ -82,16 +84,16 @@ def test_query():
 def test_answer():
     response = answer(
         question="Qu'es-ce qu'un chat ?",
-        embedding_model="sentence-camembert-large",
-        generative_model="Llama-3.2-3B-Instruct",
+        embedding_model="dangvantuan/sentence-camembert-large",
+        generative_model="tiiuae/Falcon3-1B-Instruct",
         n_samples=4,
         path_db=PATH_DB,
     )
-    assert response == "Un chat est un animal domestique de la famille des félidés."
+    assert response == "Un chat est un animal domestique de la famille des félidés, connu pour sa capacité à dormir, manger et jouer."
 
 
-if __name__ == "__main__":
-    test_similarity()
-    test_reranker()
-    test_query()
-    test_answer()
+# if __name__ == "__main__":
+#     test_similarity()
+#     test_reranker()
+#     test_query()
+#     test_answer()

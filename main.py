@@ -89,9 +89,13 @@ def load_chroma_db(embedding_name: str, path_db: Path = None) -> Chroma:
 @cache_resource
 def load_reranker(model_name: str):
     """Load the reranker model."""
-    path_reranker = PATH_MODELS / model_name
-    rerank_tokenizer = AutoTokenizer.from_pretrained(path_reranker)
-    rerank_model = AutoModelForSequenceClassification.from_pretrained(path_reranker)
+    try:
+        path_reranker = PATH_MODELS / model_name
+        rerank_tokenizer = AutoTokenizer.from_pretrained(path_reranker)
+        rerank_model = AutoModelForSequenceClassification.from_pretrained(path_reranker)
+    except OSError:
+        rerank_tokenizer = AutoTokenizer.from_pretrained(model_name)
+        rerank_model = AutoModelForSequenceClassification.from_pretrained(model_name)
     rerank_model = rerank_model.to(device)
     rerank_model.eval()
     return rerank_tokenizer, rerank_model
@@ -175,13 +179,21 @@ def get_prompt_message(question: str, retrieved_infos: str) -> List[dict]:
 @cache_resource
 def load_llm(generative_model: str) -> tuple:
     """Load the LLM tokenizer and pipeline."""
-    path_llm = PATH_MODELS / generative_model
-    model = AutoModelForCausalLM.from_pretrained(
-        path_llm,
-        torch_dtype=torch.bfloat16,
-        trust_remote_code=True,  # Allow using code that was not written by HuggingFace
-    ).to(device)
-    tokenizer = AutoTokenizer.from_pretrained(path_llm)
+    try:
+        path_llm = PATH_MODELS / generative_model
+        model = AutoModelForCausalLM.from_pretrained(
+            path_llm,
+            torch_dtype=torch.bfloat16,
+            trust_remote_code=True,  # Allow using code that was not written by HuggingFace
+        ).to(device)
+        tokenizer = AutoTokenizer.from_pretrained(path_llm)
+    except OSError:
+        model = AutoModelForCausalLM.from_pretrained(
+            generative_model,
+            torch_dtype=torch.bfloat16,
+            trust_remote_code=True,  # Allow using code that was not written by HuggingFace
+        ).to(device)
+        tokenizer = AutoTokenizer.from_pretrained(generative_model)
     pipeline = transformers.pipeline(
         "text-generation",
         model=model,

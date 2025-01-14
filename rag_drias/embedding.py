@@ -56,7 +56,7 @@ def get_embedding(model_name: str = "sentence-camembert-large") -> TypeEmbedding
         return Embedding(PATH_MODELS / model_name)
     else:
         return HuggingFaceEmbeddings(
-            model_name=str(PATH_MODELS / model_name),
+            model_name=str(model_name),
             model_kwargs={"device": device},
         )
 
