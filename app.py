@@ -3,7 +3,7 @@ import os
 
 # Add IS_STREAMLIT to the environment
 os.environ["IS_STREAMLIT"] = "True"
-from main import answer # noqa: E402
+from main import answer  # noqa: E402
 
 correct_password = st.secrets["general"]["password"]
 
