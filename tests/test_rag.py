@@ -2,13 +2,11 @@ from pathlib import Path
 
 from langchain_core.documents.base import Document
 
-from main import answer, query, rerank, prepare_database
+from main import answer, prepare_database, query, rerank
 from rag_drias.data import filter_similar_chunks
 from rag_drias.embedding import get_embedding
 
-PATH_DB = Path(
-    "tmp/"
-)
+PATH_DB = Path("tmp/")
 
 CHUNKS = [
     Document(
@@ -89,7 +87,10 @@ def test_answer():
         n_samples=4,
         path_db=PATH_DB,
     )
-    assert response == "Un chat est un animal domestique de la famille des félidés, connu pour sa capacité à dormir, manger et jouer."
+    assert (
+        response
+        == "Un chat est un animal domestique de la famille des félidés, connu pour sa capacité à dormir, manger et jouer."
+    )
 
 
 # if __name__ == "__main__":
