@@ -37,7 +37,7 @@ def download_pdf(url: str, visited_pdf: List[str]):
         return
     visited_pdf.add(url.split("//")[-1])
 
-    response = requests.get(url)
+    response = requests.get(url, timeout=10)
     if response.status_code != 200:
         return
 
@@ -71,7 +71,7 @@ def crawl_website(start_url: str, max_depth: int = 3):
     visited_pdf = set()
 
     # save the json main menu
-    response_json = requests.get(MENU_URL)
+    response_json = requests.get(MENU_URL, timeout=10)
     menu_json = response_json.json()
     with open(PATH_MENU_JSON, "w", encoding="utf-8") as file:
         json.dump(menu_json, file, ensure_ascii=False)
@@ -89,7 +89,7 @@ def crawl_website(start_url: str, max_depth: int = 3):
 
         visited.add(current_url.split("//")[-1])
 
-        response = requests.get(current_url)
+        response = requests.get(current_url, timeout=10)
         if response.status_code != 200:
             continue
 

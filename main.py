@@ -209,7 +209,7 @@ def crawl(max_depth: int = 3) -> None:
 def prepare_database(
     embedding_model: str = "sentence-camembert-large",
     overwrite: bool = False,
-):
+) -> None:
     """Prepare the Chroma vector database by chunking and embedding all the text data.
 
     Args:
@@ -232,7 +232,7 @@ def query(
     n_samples: int = 4,
     reranker: str = "",
     path_db: Path = None,
-):
+) -> List[Document]:
     """Makes a query to the vector database and retrieves the closest chunks.
 
     Args:
@@ -258,7 +258,7 @@ def answer(
     use_rag: bool = True,
     reranker: str = "",
     path_db: Path = None,
-):
+) -> str:
     """Generate answer to a question using RAG and print it."""
 
     tokenizer, pipeline = load_llm(generative_model)
