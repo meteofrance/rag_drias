@@ -28,7 +28,8 @@ CHUNKS = [
     ),
 ]
 
-create_chroma_db(PATH_DB, "dangvantuan/sentence-camembert-large", CHUNKS)
+embedding = get_embedding("dangvantuan/sentence-camembert-large")
+create_chroma_db(PATH_DB, embedding, CHUNKS)
 
 
 def test_similarity():
