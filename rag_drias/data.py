@@ -245,7 +245,3 @@ def filter_similar_chunks(
 def print_doc(doc: Document):
     print(f"-- Page Title : {doc.metadata['title']} ---")
     print(doc.page_content)
-
-if __name__ == "__main__":
-    doc = create_docs_html(Path("/scratch/shared/rag_drias/text_data/tests/HTMLs"))
-    print_doc(doc[0])
