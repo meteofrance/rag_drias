@@ -30,7 +30,7 @@ jobs:
 
     - name: Get pytorch version from environment.yaml
       id: pytorch_version
-      run: echo PYTORCH_VERS=$(cat environment.yaml | grep torch== | sed 's/.*torch==\(.*\)/\1/') >> $GITHUB_OUTPUT
+      run: echo PYTORCH_VERS=$(cat environment.yaml | grep torch= | sed 's/.*torch==\(.*\)/\1/') >> $GITHUB_OUTPUT
 
     - name: Install dependencies
       run: |
