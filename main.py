@@ -149,18 +149,22 @@ def get_prompt_message(question: str, retrieved_infos: str) -> List[dict]:
         message = [
             {
                 "role": "system",
-                "content": "Le portail DRIAS mets à disposition les projections climatiques régionalisées de référence, pour l'adaptation en France. Tu es un chatbot qui reponds aux questions à l'aide d'informations récupérées sur le site.",
+                "content": "Le portail DRIAS mets à disposition les projections climatiques régionalisées de référence\
+                , pour l'adaptation en France. Tu es un chatbot qui reponds aux questions à l'aide d'informations\
+                 récupérées sur le site.",
             },
             {
                 "role": "user",
-                "content": f"Avec les informations suivantes si utiles: {retrieved_infos}\nRéponds à cette question de manière claire et concise: {question}\nRéponse:",
+                "content": f"Avec les informations suivantes si utiles: {retrieved_infos}\nRéponds à cette question\
+                 de manière claire et concise: {question}\nRéponse:",
             },
         ]
     else:
         message = [
             {
                 "role": "system",
-                "content": "Le portail DRIAS mets à disposition les projections climatiques régionalisées de référence, pour l'adaptation en France. Tu es un chatbot qui reponds aux questions sur le site.",
+                "content": "Le portail DRIAS mets à disposition les projections climatiques régionalisées de référence\
+                , pour l'adaptation en France. Tu es un chatbot qui reponds aux questions sur le site.",
             },
             {"role": "user", "content": f"Réponds à cette question: {question}"},
         ]
