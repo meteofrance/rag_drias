@@ -21,7 +21,7 @@ from rag_drias.settings import BASE_URL, PATH_DATA, PATH_MODELS, PATH_VDB
 if torch.cuda.is_available():
     device = torch.device("cuda")
 else:
-    raise Exception("GPU not available.")
+    device = torch.device("cpu")
 
 # --- Streamlit ---
 
@@ -187,7 +187,7 @@ def load_llm(generative_model: str) -> tuple:
         model=model,
         tokenizer=tokenizer,
         torch_dtype=torch.bfloat16,
-        device=0,
+        device=device,
         pad_token_id=tokenizer.eos_token_id,
     )
     return tokenizer, pipeline

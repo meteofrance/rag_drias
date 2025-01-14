@@ -9,6 +9,11 @@ from transformers import AutoModel, AutoTokenizer
 
 from rag_drias.settings import PATH_MODELS
 
+if torch.cuda.is_available():
+    device = torch.device("cuda")
+else:
+    device = torch.device("cpu")
+
 
 class Embedding(Embeddings):
     """Wrapper class for embedding models
@@ -19,12 +24,12 @@ class Embedding(Embeddings):
     def __init__(self, model_path):
         self.tokenizer = AutoTokenizer.from_pretrained(model_path)
         self.model = AutoModel.from_pretrained(model_path)
-        self.model.to("cuda")
+        self.model.to(device)
 
     def encode(self, text):
         text = text.replace("\n", " ")
         inputs = self.tokenizer(text, return_tensors="pt", padding=True)
-        inputs = {key: value.to("cuda") for key, value in inputs.items()}
+        inputs = {key: value.to(device) for key, value in inputs.items()}
         with torch.no_grad():
             outputs = self.model(**inputs)
         last_hidden_states = outputs.last_hidden_state
@@ -52,7 +57,7 @@ def get_embedding(model_name: str = "sentence-camembert-large") -> TypeEmbedding
     else:
         return HuggingFaceEmbeddings(
             model_name=str(PATH_MODELS / model_name),
-            model_kwargs={"device": "cuda"},
+            model_kwargs={"device": device},
         )
 
 

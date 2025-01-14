@@ -13,7 +13,7 @@ PATH_DB = Path(
 CHUNKS = [
     Document(
         page_content="Les trous noirs sont des régions de l'espace où la gravité est\
-         si forte que rien, pas même la lumière, ne peut s'en échapper.",
+ si forte que rien, pas même la lumière, ne peut s'en échapper.",
         metadata={"title": "Trous noirs", "url": "https://trous-noirs.com"},
     ),
     Document(
@@ -61,6 +61,8 @@ def test_query():
         n_samples=3,
         path_db=PATH_DB,
     )
+    print(retrieved_chunks)
+    print(CHUNKS)
     assert (
         retrieved_chunks[0] == CHUNKS[1]
         and retrieved_chunks[1] == CHUNKS[3]
