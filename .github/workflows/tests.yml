@@ -36,7 +36,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt \
-                    torch=2.3.1 \
+                    torch==2.3.1 \
         pip install -r requirements_lint.txt
         pip install --editable .
 
