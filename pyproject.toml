@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ragdrias"
+version = "1.0.0"
+authors = [
+  {name="Météo-France and contributors"},
+]
+description = "Retrieval augmented generation on DRIAS website."
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Apache 2",
+    "Operating System :: OS Independent",
+]
+dynamic = ["dependencies"]
+license = {file = "LICENSE"}
+keywords = ["RAG", "LLM", "Artificial Intelligence", "Meteo-France"]
+
+[tool.setuptools.packages.find]
+namespaces = false
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+
+[project.urls]
+Homepage = "https://github.com/meteofrance/rag_drias"
+
+[tool.sourcery-analytics]
+
+[tool.sourcery-analytics.thresholds]
+method_length = 58
+method_cyclomatic_complexity = 22
+method_cognitive_complexity = 34
+method_working_memory = 45
