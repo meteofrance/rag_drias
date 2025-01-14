@@ -4,3 +4,4 @@ langchain-chroma==0.1.4
 transformers==4.46.1
 streamlit==1.41.1
 coverage==7.6.3
+pytest==8.3.3
