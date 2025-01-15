@@ -51,6 +51,7 @@ def get_embedding(model_name: str = "sentence-camembert-large") -> Embedding:
     try:
         return Embedding(PATH_MODELS / model_name)
     except OSError:
+        print("Not found in local models, loading from Hugging Face...")
         return Embedding(model_name)
 
 
