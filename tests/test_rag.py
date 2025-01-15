@@ -6,6 +6,7 @@ from main import answer, create_chroma_db, query, rerank
 from rag_drias.crawler import crawl_website
 from rag_drias.data import filter_similar_chunks
 from rag_drias.embedding import get_embedding
+from rag_drias.settings import BASE_URL
 
 PATH_TMP = Path("tmp/")
 
@@ -31,7 +32,7 @@ CHUNKS = [
 
 
 def test_crawl():
-    crawl_website(max_depth=0, path_data=PATH_TMP)
+    crawl_website(BASE_URL, max_depth=0, path_data=PATH_TMP)
     path_html = PATH_TMP / "HTMLs"
     assert path_html.exists() and len(list(path_html.glob("*.html"))) == 1
 
@@ -48,7 +49,8 @@ def test_create_chroma_db():
     )
     embedding = get_embedding("sentence-transformers/all-MiniLM-L12-v2")
     create_chroma_db(PATH_TMP, embedding, unique_chunks)
-    assert PATH_TMP.exists()
+    path_db = PATH_TMP / "chroma_database"
+    assert path_db.exists()
 
 
 def test_reranker():
@@ -73,7 +75,7 @@ def test_query():
         text="Qu'es-ce qu'un chat ?",
         embedding_name="sentence-transformers/all-MiniLM-L12-v2",
         n_samples=3,
-        PATH_TMP=PATH_TMP,
+        path_db=PATH_TMP,
     )
     assert (
         retrieved_chunks[0] == CHUNKS[1]
@@ -86,7 +88,7 @@ def test_query():
         embedding_name="sentence-transformers/all-MiniLM-L12-v2",
         n_samples=4,
         reranker="BAAI/bge-reranker-v2-m3",
-        PATH_TMP=PATH_TMP,
+        path_db=PATH_TMP,
     )
     assert retrieved_chunks[0] == CHUNKS[3] and retrieved_chunks[1] == CHUNKS[1]
 
@@ -97,7 +99,7 @@ def test_answer():
         embedding_model="sentence-transformers/all-MiniLM-L12-v2",
         generative_model="tiiuae/Falcon3-1B-Instruct",
         n_samples=4,
-        PATH_TMP=PATH_TMP,
+        path_db=PATH_TMP,
         max_new_tokens=5,
     )
     assert response == "Un chat est un animal"
