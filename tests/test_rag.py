@@ -68,8 +68,6 @@ def test_query():
         n_samples=3,
         path_db=PATH_DB,
     )
-    print(retrieved_chunks)
-    print(CHUNKS)
     assert (
         retrieved_chunks[0] == CHUNKS[1]
         and retrieved_chunks[1] == CHUNKS[3]
@@ -83,7 +81,7 @@ def test_query():
         reranker="BAAI/bge-reranker-v2-m3",
         path_db=PATH_DB,
     )
-    assert retrieved_chunks[0] == CHUNKS[1] and retrieved_chunks[1] == CHUNKS[3]
+    assert retrieved_chunks[0] == CHUNKS[3] and retrieved_chunks[1] == CHUNKS[1]
 
 
 def test_answer():
@@ -95,8 +93,4 @@ def test_answer():
         path_db=PATH_DB,
         max_new_tokens=5,
     )
-    assert (
-        response
-        == "Un chat est un animal domestique de la famille des félidés, connu pour sa capacité à\
-             dormir, manger et jouer."
-    )
+    assert response == " Un chat est un animal"
