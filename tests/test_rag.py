@@ -28,14 +28,20 @@ CHUNKS = [
     ),
 ]
 
-embedding = get_embedding("Lajavaness/bilingual-embedding-small")
-create_chroma_db(PATH_DB, embedding, CHUNKS)
-
 
 def test_similarity():
     embedding = get_embedding("Lajavaness/bilingual-embedding-small")
     unique_chunks = filter_similar_chunks(CHUNKS, embedding, threshold=0.98)
     assert len(unique_chunks) == 3
+
+
+def test_create_chroma_db():
+    unique_chunks = filter_similar_chunks(
+        CHUNKS, get_embedding("Lajavaness/bilingual-embedding-small"), threshold=0.98
+    )
+    embedding = get_embedding("Lajavaness/bilingual-embedding-small")
+    create_chroma_db(PATH_DB, embedding, unique_chunks)
+    assert PATH_DB.exists()
 
 
 def test_reranker():
@@ -87,7 +93,7 @@ def test_answer():
         generative_model="tiiuae/Falcon3-1B-Instruct",
         n_samples=4,
         path_db=PATH_DB,
-        max_new_tokens=10,
+        max_new_tokens=5,
     )
     assert (
         response
