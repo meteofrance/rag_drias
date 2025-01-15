@@ -88,4 +88,4 @@ def test_answer():
         n_samples=4,
         path_db=PATH_DB,
     )
-    assert response == "Un chat est un animal domestique de la famille des félidés."
+    assert response == "Un chat est un animal domestique de la famille des félidés, connu pour sa capacité à dormir, manger et jouer."
