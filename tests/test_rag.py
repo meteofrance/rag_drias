@@ -28,18 +28,18 @@ CHUNKS = [
     ),
 ]
 
-embedding = get_embedding("dangvantuan/sentence-camembert-large")
+embedding = get_embedding("Lajavaness/bilingual-embedding-small")
 create_chroma_db(PATH_DB, embedding, CHUNKS)
 
 
 def test_similarity():
-    embedding = get_embedding("dangvantuan/sentence-camembert-large")
+    embedding = get_embedding("Lajavaness/bilingual-embedding-small")
     unique_chunks = filter_similar_chunks(CHUNKS, embedding, threshold=0.98)
     assert len(unique_chunks) == 3
 
 
 def test_reranker():
-    embedding = get_embedding("dangvantuan/sentence-camembert-large")
+    embedding = get_embedding("Lajavaness/bilingual-embedding-small")
     unique_chunks = filter_similar_chunks(CHUNKS, embedding, threshold=0.98)
     ranking_chunks = rerank(
         model_name="BAAI/bge-reranker-v2-m3",
@@ -58,7 +58,7 @@ def test_query():
     # Without reranker
     retrieved_chunks = query(
         text="Qu'es-ce qu'un chat ?",
-        embedding_name="dangvantuan/sentence-camembert-large",
+        embedding_name="Lajavaness/bilingual-embedding-small",
         n_samples=3,
         path_db=PATH_DB,
     )
@@ -72,7 +72,7 @@ def test_query():
     # With reranker
     retrieved_chunks = query(
         text="Qu'es-ce qu'un chat ?",
-        embedding_name="dangvantuan/sentence-camembert-large",
+        embedding_name="Lajavaness/bilingual-embedding-small",
         n_samples=4,
         reranker="BAAI/bge-reranker-v2-m3",
         path_db=PATH_DB,
@@ -83,7 +83,7 @@ def test_query():
 def test_answer():
     response = answer(
         question="Qu'es-ce qu'un chat ?",
-        embedding_model="dangvantuan/sentence-camembert-large",
+        embedding_model="Lajavaness/bilingual-embedding-small",
         generative_model="tiiuae/Falcon3-1B-Instruct",
         n_samples=4,
         path_db=PATH_DB,

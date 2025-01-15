@@ -21,8 +21,8 @@ class Embedding(Embeddings):
     """
 
     def __init__(self, model_path):
-        self.tokenizer = AutoTokenizer.from_pretrained(model_path)
-        self.model = AutoModel.from_pretrained(model_path)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote=True)
+        self.model = AutoModel.from_pretrained(model_path, trust_remote_code=True)
         self.model.to(device)
 
     def encode(self, text):
