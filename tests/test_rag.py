@@ -6,7 +6,6 @@ from main import answer, create_chroma_db, query, rerank
 from rag_drias.crawler import crawl_website
 from rag_drias.data import filter_similar_chunks
 from rag_drias.embedding import get_embedding
-from rag_drias.settings import PATH_DATA
 
 PATH_TMP = Path("tmp/")
 
