@@ -26,4 +26,5 @@ dependencies:
       - typer==0.12.5
       - sentencepiece==0.2.0
       - streamlit==1.41.1
+      - tiktoken==0.8.0
 prefix: /opt/conda
