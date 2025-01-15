@@ -15,7 +15,7 @@ from transformers import (
 
 from rag_drias import data
 from rag_drias.crawler import crawl_website
-from rag_drias.embedding import TypeEmbedding, get_embedding
+from rag_drias.embedding import Embedding, get_embedding
 from rag_drias.settings import BASE_URL, PATH_DATA, PATH_MODELS, PATH_VDB
 
 if torch.cuda.is_available():
@@ -51,7 +51,7 @@ def get_db_path(embedding_model: str = "sentence-camembert-large") -> Path:
 
 def create_chroma_db(
     path_db: Path,
-    embedding: TypeEmbedding,
+    embedding: Embedding,
     docs: List[Document],
     overwrite: bool = False,
 ):

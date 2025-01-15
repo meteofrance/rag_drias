@@ -16,7 +16,7 @@ from markdownify import markdownify as md
 from sklearn.metrics.pairwise import cosine_similarity
 from tqdm import tqdm
 
-from rag_drias.embedding import TypeEmbedding
+from rag_drias.embedding import Embedding
 from rag_drias.settings import PATH_MENU_JSON
 
 
@@ -222,7 +222,7 @@ def split_to_chunks(docs) -> list[str]:
 
 
 def filter_similar_chunks(
-    chunks: List[Document], embedding: TypeEmbedding, threshold: float = 0.98
+    chunks: List[Document], embedding: Embedding, threshold: float = 0.98
 ) -> List[Document]:
     """Returns a list of chunks with a similarity below a threshold"""
     chunks_embeddings = [

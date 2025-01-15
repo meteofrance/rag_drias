@@ -2,7 +2,6 @@ from typing import List, Union
 
 import numpy as np
 import torch
-from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_core.embeddings import Embeddings
 from tqdm import tqdm
 from transformers import AutoModel, AutoTokenizer
@@ -47,21 +46,15 @@ class Embedding(Embeddings):
         return self.encode(text)
 
 
-TypeEmbedding = Union[Embedding, HuggingFaceEmbeddings]
-
-
-def get_embedding(model_name: str = "sentence-camembert-large") -> TypeEmbedding:
-    if model_name == "sentence-camembert-large":
-        print("Loading Camembert...")
+def get_embedding(model_name: str = "sentence-camembert-large") -> Embedding:
+    print("Loading Camembert...")
+    try:
         return Embedding(PATH_MODELS / model_name)
-    else:
-        return HuggingFaceEmbeddings(
-            model_name=str(model_name),
-            model_kwargs={"device": device},
-        )
+    except OSError:
+        return Embedding(model_name)
 
 
-def test_embedding(embedding: TypeEmbedding):
+def test_embedding(embedding: Embedding):
     sentence1 = "This is a cat."
     sentence2 = "This is a dog."
     sentence3 = "I like train."
