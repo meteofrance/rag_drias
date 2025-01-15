@@ -2,9 +2,10 @@ from pathlib import Path
 
 from langchain_core.documents.base import Document
 
-from main import answer, create_chroma_db, query, rerank
+from main import answer, crawl, create_chroma_db, query, rerank
 from rag_drias.data import filter_similar_chunks
 from rag_drias.embedding import get_embedding
+from rag_drias.settings import PATH_DATA
 
 PATH_DB = Path("tmp/")
 
@@ -27,6 +28,12 @@ CHUNKS = [
         metadata={"title": "Chat", "url": "https://chat.com"},
     ),
 ]
+
+
+def test_crawl():
+    crawl(max_depth=0)
+    path_html = PATH_DATA / "HTMLs"
+    assert path_html.exists() and len(list(path_html.glob("*.html"))) == 1
 
 
 def test_similarity():
