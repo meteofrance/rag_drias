@@ -270,6 +270,7 @@ def answer(
     use_rag: bool = True,
     reranker: str = "",
     path_db: Path = None,
+    max_new_tokens: int = 500,
 ) -> str:
     """Generate answer to a question using RAG and print it."""
 
@@ -296,7 +297,7 @@ def answer(
         do_sample=True,
         temperature=0.1,
         num_return_sequences=1,
-        max_new_tokens=500,
+        max_new_tokens=max_new_tokens,
     )
     print(f"LLM output:\n{sequences[0]['generated_text'][len(prompt):]}")
     return sequences[0]["generated_text"][len(prompt) :]

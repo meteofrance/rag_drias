@@ -87,5 +87,9 @@ def test_answer():
         generative_model="tiiuae/Falcon3-1B-Instruct",
         n_samples=4,
         path_db=PATH_DB,
+        max_new_tokens=10,
     )
-    assert response == "Un chat est un animal domestique de la famille des félidés, connu pour sa capacité à dormir, manger et jouer."
+    assert (
+        response
+        == "Un chat est un animal domestique de la famille des félidés, connu pour sa capacité à dormir, manger et jouer."
+    )
