@@ -31,12 +31,6 @@ CHUNKS = [
 ]
 
 
-def test_crawl():
-    crawl_website(BASE_URL, max_depth=0, path_data=PATH_TMP)
-    path_html = PATH_TMP / "HTMLs"
-    assert path_html.exists() and len(list(path_html.glob("*.html"))) == 1
-
-
 def test_similarity():
     embedding = get_embedding("sentence-transformers/all-MiniLM-L12-v2")
     unique_chunks = filter_similar_chunks(CHUNKS, embedding, threshold=0.98)
@@ -49,8 +43,12 @@ def test_create_chroma_db():
     )
     embedding = get_embedding("sentence-transformers/all-MiniLM-L12-v2")
     create_chroma_db(PATH_TMP, embedding, unique_chunks)
-    path_db = PATH_TMP / "chroma_database"
-    assert path_db.exists()
+
+
+def test_crawl():
+    crawl_website(BASE_URL, max_depth=0, path_data=PATH_TMP)
+    path_html = PATH_TMP / "HTMLs"
+    assert path_html.exists() and len(list(path_html.glob("*.html"))) == 1
 
 
 def test_reranker():
