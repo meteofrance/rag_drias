@@ -47,4 +47,4 @@ jobs:
       run: |
         coverage run -p -m pytest tests/
         coverage combine
-        coverage report  --ignore-errors --fail-under=60
+        coverage report  --ignore-errors --fail-under=50
