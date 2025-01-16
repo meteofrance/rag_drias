@@ -94,8 +94,12 @@ def load_reranker(model_name: str):
         rerank_tokenizer = AutoTokenizer.from_pretrained(path_reranker)
         rerank_model = AutoModelForSequenceClassification.from_pretrained(path_reranker)
     except OSError:
-        rerank_tokenizer = AutoTokenizer.from_pretrained(model_name)
-        rerank_model = AutoModelForSequenceClassification.from_pretrained(model_name)
+        rerank_tokenizer = AutoTokenizer.from_pretrained(
+            model_name, trust_remote_code=True
+        )
+        rerank_model = AutoModelForSequenceClassification.from_pretrained(
+            model_name, trust_remote_code=True
+        )
     rerank_model = rerank_model.to(device)
     rerank_model.eval()
     return rerank_tokenizer, rerank_model
@@ -123,7 +127,6 @@ def rerank(
             )
             .float()
         )
-
     _, indices = scores.topk(k)
     return [docs[i] for i in indices]
 
@@ -155,13 +158,13 @@ def get_prompt_message(question: str, retrieved_infos: str) -> List[dict]:
             {
                 "role": "system",
                 "content": "Le portail DRIAS mets à disposition les projections climatiques régionalisées de référence\
-                , pour l'adaptation en France. Tu es un chatbot qui reponds aux questions à l'aide d'informations\
-                 récupérées sur le site.",
+, pour l'adaptation en France. Tu es un chatbot qui reponds aux questions à l'aide d'informations\
+ récupérées sur le site.",
             },
             {
                 "role": "user",
                 "content": f"Avec les informations suivantes si utiles: {retrieved_infos}\nRéponds à cette question\
-                 de manière claire et concise: {question}\nRéponse:",
+ de manière claire et concise: {question}\nRéponse:",
             },
         ]
     else:
@@ -169,7 +172,7 @@ def get_prompt_message(question: str, retrieved_infos: str) -> List[dict]:
             {
                 "role": "system",
                 "content": "Le portail DRIAS mets à disposition les projections climatiques régionalisées de référence\
-                , pour l'adaptation en France. Tu es un chatbot qui reponds aux questions sur le site.",
+, pour l'adaptation en France. Tu es un chatbot qui reponds aux questions sur le site.",
             },
             {"role": "user", "content": f"Réponds à cette question: {question}"},
         ]

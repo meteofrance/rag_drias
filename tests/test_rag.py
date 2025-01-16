@@ -55,7 +55,7 @@ def test_reranker():
     embedding = get_embedding("sentence-transformers/all-MiniLM-L12-v2")
     unique_chunks = filter_similar_chunks(CHUNKS, embedding, threshold=0.98)
     ranking_chunks = rerank(
-        model_name="BAAI/bge-reranker-base",
+        model_name="jinaai/jina-reranker-v2-base-multilingual",
         text="Qu'es-ce qu'un chat ?",
         docs=unique_chunks,
         k=3,
@@ -85,7 +85,7 @@ def test_query():
         text="Qu'es-ce qu'un chat ?",
         embedding_name="sentence-transformers/all-MiniLM-L12-v2",
         n_samples=4,
-        reranker="BAAI/bge-reranker-base",
+        reranker="jinaai/jina-reranker-v2-base-multilingual",
         path_db=PATH_TMP,
     )
     assert retrieved_chunks[0] == CHUNKS[3] and retrieved_chunks[1] == CHUNKS[1]
