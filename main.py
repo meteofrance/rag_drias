@@ -1,6 +1,6 @@
 import shutil
 from pathlib import Path
-from typing import List, Literal
+from typing import List
 
 import torch
 import typer
@@ -22,6 +22,20 @@ if torch.cuda.is_available():
     device = torch.device("cuda")
 else:
     raise Exception("GPU not available.")
+
+# --- Streamlit ---
+
+import streamlit as st
+import os
+
+
+def cache_resource(func):
+    """Cache the resource if the function is called by a streamlit environment."""
+    IS_STREAMLIT = os.getenv("IS_STREAMLIT", False)
+    if IS_STREAMLIT:
+        return st.cache_resource(func, ttl=3600)
+    return func
+
 
 app = typer.Typer(pretty_exceptions_enable=False)
 
@@ -57,7 +71,11 @@ def create_chroma_db(
     return vectordb
 
 
-def load_chroma_db(path_db: Path, embedding: TypeEmbedding):
+@cache_resource
+def load_chroma_db(embedding_name: str):
+    """Load the Chroma vector database."""
+    path_db = get_db_path(embedding_name)
+    embedding = get_embedding(embedding_name)
     if not (path_db.exists() and any(path_db.iterdir())):
         raise FileExistsError(f"Vector database {path_db} needs to be prepared.")
     return Chroma(embedding_function=embedding, persist_directory=str(path_db))
@@ -66,15 +84,22 @@ def load_chroma_db(path_db: Path, embedding: TypeEmbedding):
 # ----- RAG -----
 
 
-def rerank(
-    model_name: str, text: str, docs: List[Document], k: int = 4
-) -> List[Document]:
-    """Returns the k most relevant chunks for the question chosen by a reranker llm."""
+@cache_resource
+def load_reranker(model_name: str):
+    """Load the reranker model."""
     path_reranker = PATH_MODELS / model_name
     rerank_tokenizer = AutoTokenizer.from_pretrained(path_reranker)
     rerank_model = AutoModelForSequenceClassification.from_pretrained(path_reranker)
     rerank_model = rerank_model.to(device)
     rerank_model.eval()
+    return rerank_tokenizer, rerank_model
+
+
+def rerank(
+    model_name: str, text: str, docs: List[Document], k: int = 4
+) -> List[Document]:
+    """Returns the k most relevant chunks for the question chosen by a reranker llm."""
+    rerank_tokenizer, rerank_model = load_reranker(model_name)
 
     rerank_inp = [[text, doc.page_content] for doc in docs]
     with torch.no_grad():
@@ -99,15 +124,11 @@ def rerank(
 
 def retrieve(
     text: str,
-    embedding_name: str,
+    vectordb: Chroma,
     n_samples: int,
     reranker: str = "",
 ) -> List[Document]:
     """Retrieve the most relevant chunks in relation to the query."""
-    path_db = get_db_path(embedding_name)
-    embedding = get_embedding(embedding_name)
-    vectordb = load_chroma_db(path_db, embedding)
-
     if reranker != "":
         chunks = vectordb.similarity_search(text, k=n_samples)
         chunks = rerank(reranker, text, chunks, k=n_samples // 2)
@@ -145,6 +166,7 @@ def get_prompt_message(question: str, retrieved_infos: str) -> List[dict]:
     return message
 
 
+@cache_resource
 def load_llm(generative_model: str) -> tuple:
     """Load the LLM tokenizer and pipeline."""
     path_llm = PATH_MODELS / generative_model
@@ -202,7 +224,7 @@ def query(
     text: str,
     embedding_name: str = "sentence-camembert-large",
     n_samples: int = 4,
-    use_rerank: bool = False,
+    reranker: str = "",
 ):
     """Makes a query to the vector database and retrieves the closest chunks.
 
@@ -211,7 +233,8 @@ def query(
         embedding_name (str, optional): Embedding model name. Defaults to "Camembert".
         data_source (str, optional): Name of the data source. Defaults to "Drias".
     """
-    chunks = retrieve(text, embedding_name, n_samples, use_rerank)
+    vectordb = load_chroma_db(embedding_name)
+    chunks = retrieve(text, vectordb, n_samples, reranker)
     for i, chunk in enumerate(chunks):
         print(f"---> Relevant chunk {i} <---")
         data.print_doc(chunk)
@@ -222,17 +245,19 @@ def query(
 def answer(
     question: str,
     embedding_model: str = "sentence-camembert-large",
-    generative_model: str = "Chocolatine-14B-Instruct-4k-DPO",
+    generative_model: str = "Llama-3.2-3B-Instruct",
     n_samples: int = 10,
     use_rag: bool = True,
     reranker: str = "",
 ):
     """Generate answer to a question using RAG and print it."""
+
     tokenizer, pipeline = load_llm(generative_model)
 
     retrieved_infos = ""
     if use_rag:
-        chunks = retrieve(question, embedding_model, n_samples, reranker)
+        vectordb = load_chroma_db(embedding_model)
+        chunks = retrieve(question, vectordb, n_samples, reranker)
 
         for chunk in chunks:
             retrieved_infos += f"\n-- Page Title : {chunk.metadata['title']} --\n"
@@ -253,6 +278,7 @@ def answer(
         max_new_tokens=500,
     )
     print(f"LLM output:\n{sequences[0]['generated_text'][len(prompt):]}")
+    return sequences[0]["generated_text"][len(prompt) :]
 
 
 if __name__ == "__main__":
