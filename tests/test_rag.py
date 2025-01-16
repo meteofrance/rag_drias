@@ -34,7 +34,7 @@ CHUNKS = [
 def test_similarity():
     embedding = get_embedding("sentence-transformers/all-MiniLM-L12-v2")
     unique_chunks = filter_similar_chunks(CHUNKS, embedding, threshold=0.98)
-    assert len(unique_chunks) == 3
+    assert unique_chunks == [CHUNKS[0], CHUNKS[1], CHUNKS[3]]
 
 
 def test_create_chroma_db():
