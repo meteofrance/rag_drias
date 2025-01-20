@@ -127,7 +127,16 @@ def rerank(
             )
             .float()
         )
-    _, indices = scores.topk(k)
+    scores, indices = scores.topk(k)
+
+    # map scores to float values between 0 and 1 by a sigmoid function
+    scores = torch.sigmoid(scores).cpu().numpy()
+    max_score = scores.max()
+    # add a threshold to keep only the most relevant chunks
+    indices = indices[scores > max(max_score**4, 1e-2)]
+
+    print(scores[scores > max(max_score**4,1e-3)])
+    
     return [docs[i] for i in indices]
 
 
@@ -224,6 +233,7 @@ def crawl(max_depth: int = 3) -> None:
 def prepare_database(
     embedding_model: str = "sentence-camembert-large",
     overwrite: bool = False,
+    path_db: Path = None,
 ) -> None:
     """Prepare the Chroma vector database by chunking and embedding all the text data.
 
@@ -236,7 +246,8 @@ def prepare_database(
     chunks = data.split_to_chunks(docs)
     embedding = get_embedding(embedding_model)
     chunks = data.filter_similar_chunks(chunks, embedding)
-    path_db = get_db_path(embedding_model)
+    if path_db is None:
+        path_db = get_db_path(embedding_model)
     create_chroma_db(path_db, embedding, chunks, overwrite)
 
 

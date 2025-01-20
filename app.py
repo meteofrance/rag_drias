@@ -1,6 +1,7 @@
 import os
 
 import streamlit as st
+from rag_drias.settings import PATH_VDB
 
 # Add IS_STREAMLIT to the environment
 os.environ["IS_STREAMLIT"] = "True"
@@ -81,6 +82,14 @@ else:
 
     if reranker_model == "No reranker":
         reranker_model = ""
+
+    use_pdf = st.sidebar.checkbox(
+        "PDFs in database",
+        value=False,
+        help="Si cette option est activée, les PDFs qui sont en lien sur le portail DRIAS seront dans la base\
+             de données utilisée pour le RAG. Cela permet d'avoir plus d'informations mais celles ci ne sont pas\
+             toujours pertinentes.",
+    )
 
     # Initialize chat history
     if "messages" not in st.session_state:
