@@ -1,3 +1,4 @@
+import warnings
 from typing import List
 
 import numpy as np
@@ -20,9 +21,19 @@ class Embedding(Embeddings):
     Can be easily used with Chroma database.
     """
 
-    def __init__(self, model_path):
-        self.tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote=True)
-        self.model = AutoModel.from_pretrained(model_path, trust_remote_code=True)
+    def __init__(self, model_name):
+        try:
+            model_path = PATH_MODELS / model_name
+            self.tokenizer = AutoTokenizer.from_pretrained(model_path)
+            self.model = AutoModel.from_pretrained(model_path)
+        except OSError:
+            warnings.warn(
+                f"\033[31mModel {model_name} not found locally. Downloading from HuggingFace.\033[0m"
+            )
+            self.tokenizer = AutoTokenizer.from_pretrained(
+                model_name, trust_remote=True
+            )
+            self.model = AutoModel.from_pretrained(model_name, trust_remote_code=True)
         self.model.to(device)
 
     def encode(self, text):
@@ -48,11 +59,7 @@ class Embedding(Embeddings):
 
 def get_embedding(model_name: str = "sentence-camembert-large") -> Embedding:
     print("Loading Camembert...")
-    try:
-        return Embedding(PATH_MODELS / model_name)
-    except OSError:
-        print("Not found in local models, loading from Hugging Face...")
-        return Embedding(model_name)
+    return Embedding(model_name)
 
 
 def test_embedding(embedding: Embedding):
