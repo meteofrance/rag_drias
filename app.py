@@ -91,6 +91,11 @@ else:
              toujours pertinentes.",
     )
 
+    if use_pdf:
+        path_db = PATH_VDB / "with_pdfs"
+    else:
+        path_db = PATH_VDB
+
     # Initialize chat history
     if "messages" not in st.session_state:
         st.session_state.messages = []
@@ -116,6 +121,7 @@ else:
                 n_samples=n_samples,
                 use_rag=use_rag,
                 reranker=reranker_model,
+                path_db=path_db,
             )
 
             yield response

@@ -44,9 +44,9 @@ app = typer.Typer(pretty_exceptions_enable=False)
 # ----- Chroma Database -----
 
 
-def get_db_path(embedding_model: str = "sentence-camembert-large") -> Path:
+def get_db_path(embedding_model: str = "sentence-camembert-large", path_db: Path = PATH_VDB) -> Path:
     """Get path of the database."""
-    return PATH_VDB / embedding_model
+    return path_db / embedding_model
 
 
 def create_chroma_db(
@@ -73,10 +73,9 @@ def create_chroma_db(
 
 
 @cache_resource
-def load_chroma_db(embedding_name: str, path_db: Path = None) -> Chroma:
+def load_chroma_db(embedding_name: str, path_db: Path = PATH_VDB) -> Chroma:
     """Load the Chroma vector database."""
-    if path_db is None:
-        path_db = get_db_path(embedding_name)
+    path_db = get_db_path(embedding_name, path_db)
     embedding = get_embedding(embedding_name)
     if not (path_db.exists() and any(path_db.iterdir())):
         raise FileExistsError(f"Vector database {path_db} needs to be prepared.")
@@ -166,9 +165,10 @@ def get_prompt_message(question: str, retrieved_infos: str) -> List[dict]:
         message = [
             {
                 "role": "system",
-                "content": "Le portail DRIAS mets à disposition les projections climatiques régionalisées de référence\
-, pour l'adaptation en France. Tu es un chatbot qui reponds aux questions à l'aide d'informations\
- récupérées sur le site.",
+                "content": "Le portail DRIAS (Donner accès aux scénarios climatiques Régionalisés français pour\
+ l'Impact et l'Adaptation de nos Sociétés et environnement) mets à disposition les projections climatiques\
+ régionalisées de référence, pour l'adaptation en France. Tu es un chatbot qui reponds aux questions à l'aide\
+ d'informations récupérées sur le site.",
             },
             {
                 "role": "user",
@@ -180,10 +180,13 @@ def get_prompt_message(question: str, retrieved_infos: str) -> List[dict]:
         message = [
             {
                 "role": "system",
-                "content": "Le portail DRIAS mets à disposition les projections climatiques régionalisées de référence\
-, pour l'adaptation en France. Tu es un chatbot qui reponds aux questions sur le site.",
+                "content": "Le portail DRIAS (Donner accès aux scénarios climatiques Régionalisés français pour\
+ l'Impact et l'Adaptation de nos Sociétés et environnement) mets à disposition les projections climatiques\
+ régionalisées de référence, pour l'adaptation en France. Tu es un chatbot qui reponds aux questions sur le\
+ site.",
             },
-            {"role": "user", "content": f"Réponds à cette question: {question}"},
+            {"role": "user", "content": f"Réponds à cette question de manière claire et concise:\
+ {question}\nRéponse:"},
         ]
     return message
 
