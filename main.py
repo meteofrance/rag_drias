@@ -1,32 +1,34 @@
 import shutil
+import warnings
 from pathlib import Path
 from typing import List
 
 import torch
+import transformers
 import typer
 from langchain_chroma import Chroma
 from langchain_core.documents.base import Document
-import transformers
 from transformers import (
-    AutoTokenizer,
     AutoModelForCausalLM,
     AutoModelForSequenceClassification,
+    AutoTokenizer,
 )
 
 from rag_drias import data
 from rag_drias.crawler import crawl_website
-from rag_drias.embedding import TypeEmbedding, get_embedding
-from rag_drias.settings import PATH_DATA, PATH_VDB, BASE_URL, PATH_MODELS
+from rag_drias.embedding import Embedding, get_embedding
+from rag_drias.settings import BASE_URL, PATH_DATA, PATH_MODELS, PATH_VDB
 
 if torch.cuda.is_available():
     device = torch.device("cuda")
 else:
-    raise Exception("GPU not available.")
+    device = torch.device("cpu")
 
 # --- Streamlit ---
 
-import streamlit as st
 import os
+
+import streamlit as st
 
 
 def cache_resource(func):
@@ -50,7 +52,7 @@ def get_db_path(embedding_model: str = "sentence-camembert-large") -> Path:
 
 def create_chroma_db(
     path_db: Path,
-    embedding: TypeEmbedding,
+    embedding: Embedding,
     docs: List[Document],
     overwrite: bool = False,
 ):
@@ -72,9 +74,10 @@ def create_chroma_db(
 
 
 @cache_resource
-def load_chroma_db(embedding_name: str):
+def load_chroma_db(embedding_name: str, path_db: Path = None) -> Chroma:
     """Load the Chroma vector database."""
-    path_db = get_db_path(embedding_name)
+    if path_db is None:
+        path_db = get_db_path(embedding_name)
     embedding = get_embedding(embedding_name)
     if not (path_db.exists() and any(path_db.iterdir())):
         raise FileExistsError(f"Vector database {path_db} needs to be prepared.")
@@ -87,9 +90,20 @@ def load_chroma_db(embedding_name: str):
 @cache_resource
 def load_reranker(model_name: str):
     """Load the reranker model."""
-    path_reranker = PATH_MODELS / model_name
-    rerank_tokenizer = AutoTokenizer.from_pretrained(path_reranker)
-    rerank_model = AutoModelForSequenceClassification.from_pretrained(path_reranker)
+    try:
+        path_reranker = PATH_MODELS / model_name
+        rerank_tokenizer = AutoTokenizer.from_pretrained(path_reranker)
+        rerank_model = AutoModelForSequenceClassification.from_pretrained(path_reranker)
+    except OSError:
+        warnings.warn(
+            f"\033[31mModel {model_name} not found locally. Downloading from HuggingFace.\033[0m"
+        )
+        rerank_tokenizer = AutoTokenizer.from_pretrained(
+            model_name, trust_remote_code=True
+        )
+        rerank_model = AutoModelForSequenceClassification.from_pretrained(
+            model_name, trust_remote_code=True
+        )
     rerank_model = rerank_model.to(device)
     rerank_model.eval()
     return rerank_tokenizer, rerank_model
@@ -117,7 +131,6 @@ def rerank(
             )
             .float()
         )
-
     _, indices = scores.topk(k)
     return [docs[i] for i in indices]
 
@@ -148,18 +161,22 @@ def get_prompt_message(question: str, retrieved_infos: str) -> List[dict]:
         message = [
             {
                 "role": "system",
-                "content": "Le portail DRIAS mets à disposition les projections climatiques régionalisées de référence, pour l'adaptation en France. Tu es un chatbot qui reponds aux questions à l'aide d'informations récupérées sur le site.",
+                "content": "Le portail DRIAS mets à disposition les projections climatiques régionalisées de référence\
+, pour l'adaptation en France. Tu es un chatbot qui reponds aux questions à l'aide d'informations\
+ récupérées sur le site.",
             },
             {
                 "role": "user",
-                "content": f"Avec les informations suivantes si utiles: {retrieved_infos}\nRéponds à cette question de manière claire et concise: {question}\nRéponse:",
+                "content": f"Avec les informations suivantes si utiles: {retrieved_infos}\nRéponds à cette question\
+ de manière claire et concise: {question}\nRéponse:",
             },
         ]
     else:
         message = [
             {
                 "role": "system",
-                "content": "Le portail DRIAS mets à disposition les projections climatiques régionalisées de référence, pour l'adaptation en France. Tu es un chatbot qui reponds aux questions sur le site.",
+                "content": "Le portail DRIAS mets à disposition les projections climatiques régionalisées de référence\
+, pour l'adaptation en France. Tu es un chatbot qui reponds aux questions sur le site.",
             },
             {"role": "user", "content": f"Réponds à cette question: {question}"},
         ]
@@ -169,19 +186,29 @@ def get_prompt_message(question: str, retrieved_infos: str) -> List[dict]:
 @cache_resource
 def load_llm(generative_model: str) -> tuple:
     """Load the LLM tokenizer and pipeline."""
-    path_llm = PATH_MODELS / generative_model
-    model = AutoModelForCausalLM.from_pretrained(
-        path_llm,
-        torch_dtype=torch.bfloat16,
-        trust_remote_code=True,  # Allow using code that was not written by HuggingFace
-    ).to(device)
-    tokenizer = AutoTokenizer.from_pretrained(path_llm)
+    try:
+        path_llm = PATH_MODELS / generative_model
+        model = AutoModelForCausalLM.from_pretrained(
+            path_llm,
+            torch_dtype=torch.bfloat16,
+        ).to(device)
+        tokenizer = AutoTokenizer.from_pretrained(path_llm)
+    except OSError:
+        warnings.warn(
+            f"\033[31mModel {generative_model} not found locally. Downloading from HuggingFace.\033[0m"
+        )
+        model = AutoModelForCausalLM.from_pretrained(
+            generative_model,
+            torch_dtype=torch.bfloat16,
+            trust_remote_code=True,  # Allow using code that was not written by HuggingFace
+        ).to(device)
+        tokenizer = AutoTokenizer.from_pretrained(generative_model)
     pipeline = transformers.pipeline(
         "text-generation",
         model=model,
         tokenizer=tokenizer,
         torch_dtype=torch.bfloat16,
-        device=0,
+        device=device,
         pad_token_id=tokenizer.eos_token_id,
     )
     return tokenizer, pipeline
@@ -203,7 +230,7 @@ def crawl(max_depth: int = 3) -> None:
 def prepare_database(
     embedding_model: str = "sentence-camembert-large",
     overwrite: bool = False,
-):
+) -> None:
     """Prepare the Chroma vector database by chunking and embedding all the text data.
 
     Args:
@@ -225,7 +252,8 @@ def query(
     embedding_name: str = "sentence-camembert-large",
     n_samples: int = 4,
     reranker: str = "",
-):
+    path_db: Path = None,
+) -> List[Document]:
     """Makes a query to the vector database and retrieves the closest chunks.
 
     Args:
@@ -233,12 +261,13 @@ def query(
         embedding_name (str, optional): Embedding model name. Defaults to "Camembert".
         data_source (str, optional): Name of the data source. Defaults to "Drias".
     """
-    vectordb = load_chroma_db(embedding_name)
+    vectordb = load_chroma_db(embedding_name, path_db)
     chunks = retrieve(text, vectordb, n_samples, reranker)
     for i, chunk in enumerate(chunks):
         print(f"---> Relevant chunk {i} <---")
         data.print_doc(chunk)
         print("-" * 20)
+    return chunks
 
 
 @app.command()
@@ -249,14 +278,16 @@ def answer(
     n_samples: int = 10,
     use_rag: bool = True,
     reranker: str = "",
-):
+    path_db: Path = None,
+    max_new_tokens: int = 500,
+) -> str:
     """Generate answer to a question using RAG and print it."""
 
     tokenizer, pipeline = load_llm(generative_model)
 
     retrieved_infos = ""
     if use_rag:
-        vectordb = load_chroma_db(embedding_model)
+        vectordb = load_chroma_db(embedding_model, path_db)
         chunks = retrieve(question, vectordb, n_samples, reranker)
 
         for chunk in chunks:
@@ -275,7 +306,7 @@ def answer(
         do_sample=True,
         temperature=0.1,
         num_return_sequences=1,
-        max_new_tokens=500,
+        max_new_tokens=max_new_tokens,
     )
     print(f"LLM output:\n{sequences[0]['generated_text'][len(prompt):]}")
     return sequences[0]["generated_text"][len(prompt) :]

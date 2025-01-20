@@ -1,0 +1,50 @@
+# This workflow will install Python dependencies, run tests and lint with a single version of Python
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
+
+name: Tests
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Get python version from environment.yaml
+      id: python_version
+      run: echo PYTHON_VERS=$(cat environment.yaml | grep python= | sed 's/.*python=\([0-9]\.[0-9]*\.[0-9]*\).*/\1/') >> $GITHUB_OUTPUT
+
+    - name: Set up Python ${{ steps.python_version.outputs.PYTHON_VERS }}
+      uses: actions/setup-python@v3
+      with:
+        python-version: "${{ steps.python_version.outputs.PYTHON_VERS }}"
+
+    - name: Get pytorch version from environment.yaml
+      id: pytorch_version
+      run: echo PYTORCH_VERS=$(cat environment.yaml | grep torch= | sed 's/.*torch==\(.*\)/\1/') >> $GITHUB_OUTPUT
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install torch==${{ steps.pytorch_version.outputs.PYTORCH_VERS }}
+        pip install -r requirements_lint.txt
+        pip install --editable .
+
+    - name: Lint
+      run: |
+        ./lint.sh .
+    - name: Integration Test with pytest
+      run: |
+        coverage run -p -m pytest tests/
+        coverage combine
+        coverage report  --ignore-errors --fail-under=50

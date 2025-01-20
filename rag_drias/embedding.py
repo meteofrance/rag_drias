@@ -1,13 +1,18 @@
-from typing import List, Union
+import warnings
+from typing import List
 
 import numpy as np
 import torch
-from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_core.embeddings import Embeddings
 from tqdm import tqdm
 from transformers import AutoModel, AutoTokenizer
 
 from rag_drias.settings import PATH_MODELS
+
+if torch.cuda.is_available():
+    device = torch.device("cuda")
+else:
+    device = torch.device("cpu")
 
 
 class Embedding(Embeddings):
@@ -16,15 +21,25 @@ class Embedding(Embeddings):
     Can be easily used with Chroma database.
     """
 
-    def __init__(self, model_path):
-        self.tokenizer = AutoTokenizer.from_pretrained(model_path)
-        self.model = AutoModel.from_pretrained(model_path)
-        self.model.to("cuda")
+    def __init__(self, model_name):
+        try:
+            model_path = PATH_MODELS / model_name
+            self.tokenizer = AutoTokenizer.from_pretrained(model_path)
+            self.model = AutoModel.from_pretrained(model_path)
+        except OSError:
+            warnings.warn(
+                f"\033[31mModel {model_name} not found locally. Downloading from HuggingFace.\033[0m"
+            )
+            self.tokenizer = AutoTokenizer.from_pretrained(
+                model_name, trust_remote=True
+            )
+            self.model = AutoModel.from_pretrained(model_name, trust_remote_code=True)
+        self.model.to(device)
 
     def encode(self, text):
         text = text.replace("\n", " ")
         inputs = self.tokenizer(text, return_tensors="pt", padding=True)
-        inputs = {key: value.to("cuda") for key, value in inputs.items()}
+        inputs = {key: value.to(device) for key, value in inputs.items()}
         with torch.no_grad():
             outputs = self.model(**inputs)
         last_hidden_states = outputs.last_hidden_state
@@ -42,21 +57,12 @@ class Embedding(Embeddings):
         return self.encode(text)
 
 
-TypeEmbedding = Union[Embedding, HuggingFaceEmbeddings]
+def get_embedding(model_name: str = "sentence-camembert-large") -> Embedding:
+    print("Loading Camembert...")
+    return Embedding(model_name)
 
 
-def get_embedding(model_name: str = "sentence-camembert-large") -> TypeEmbedding:
-    if model_name == "sentence-camembert-large":
-        print("Loading Camembert...")
-        return Embedding(PATH_MODELS / model_name)
-    else:
-        return HuggingFaceEmbeddings(
-            model_name=str(PATH_MODELS / model_name),
-            model_kwargs={"device": "cuda"},
-        )
-
-
-def test_embedding(embedding: TypeEmbedding):
+def test_embedding(embedding: Embedding):
     sentence1 = "This is a cat."
     sentence2 = "This is a dog."
     sentence3 = "I like train."

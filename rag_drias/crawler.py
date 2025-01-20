@@ -1,26 +1,26 @@
-import urllib.parse
+import json
 import re
 import ssl
-import json
-
+import urllib.parse
 from collections import deque
+from pathlib import Path
 from typing import List
 
 import requests
 from bs4 import BeautifulSoup
 
-from rag_drias.settings import PATH_DATA, PATH_MENU_JSON, MENU_URL, SECTION_URL
+from rag_drias.settings import MENU_URL, PATH_DATA, PATH_MENU_JSON, SECTION_URL
 
 ssl._create_default_https_context = ssl._create_unverified_context
 
 
-def save_html(content: str, url: str):
+def save_html(content: str, url: str, path_data: Path = PATH_DATA):
     """Save HTML content in a file .html."""
     # Create a valid file name
     clean_url = re.sub(r"^https?://", "", url)
     clean_url = re.sub(r"[/\\]", "_", clean_url)
     filename = f"{clean_url}.html"
-    save_path_html = PATH_DATA / "HTMLs"
+    save_path_html = path_data / "HTMLs"
     filepath = save_path_html / filename
 
     # Create the directory if necessary
@@ -32,17 +32,17 @@ def save_html(content: str, url: str):
         file.write(content)
 
 
-def download_pdf(url: str, visited_pdf: List[str]):
+def download_pdf(url: str, visited_pdf: List[str], path_data: Path = PATH_DATA):
     """Save the pdf if not already done."""
     if url.split("//")[-1] in visited_pdf:
         return
     visited_pdf.add(url.split("//")[-1])
 
-    response = requests.get(url)
+    response = requests.get(url, timeout=10)
     if response.status_code != 200:
         return
 
-    save_path_pdf = PATH_DATA / "PDFs"
+    save_path_pdf = path_data / "PDFs"
     filename = url.split("/")[-1]
     filepath = save_path_pdf / filename
 
@@ -64,7 +64,7 @@ def add_menu_to_queue(json_menu: List[dict], queue: deque, depth: int = 1):
             add_menu_to_queue(section["children"], queue, depth + 1)
 
 
-def crawl_website(start_url: str, max_depth: int = 3):
+def crawl_website(start_url: str, max_depth: int = 3, path_data: Path = PATH_DATA):
     """Download htmls and pdfs from the home page"""
     domain = urllib.parse.urlparse(start_url).netloc
     queue = deque([(start_url, 0)])
@@ -72,9 +72,13 @@ def crawl_website(start_url: str, max_depth: int = 3):
     visited_pdf = set()
 
     # save the json main menu
-    response_json = requests.get(MENU_URL)
+    response_json = requests.get(MENU_URL, timeout=10)
     menu_json = response_json.json()
-    with open(PATH_MENU_JSON, "w", encoding="utf-8") as file:
+    if path_data != PATH_DATA:
+        path_menu_json = path_data / PATH_MENU_JSON.name
+    else:
+        path_menu_json = PATH_MENU_JSON
+    with open(path_menu_json, "w", encoding="utf-8") as file:
         json.dump(menu_json, file, ensure_ascii=False)
 
     # add urls of the main menu in depth 1
@@ -90,12 +94,12 @@ def crawl_website(start_url: str, max_depth: int = 3):
 
         visited.add(current_url.split("//")[-1])
 
-        response = requests.get(current_url)
+        response = requests.get(current_url, timeout=10)
         if response.status_code != 200:
             continue
 
         html_content = response.text
-        save_html(html_content, current_url)
+        save_html(html_content, current_url, path_data)
 
         if max_depth > depth:
             soup = BeautifulSoup(html_content, "html.parser")
@@ -106,7 +110,7 @@ def crawl_website(start_url: str, max_depth: int = 3):
                 if domain in full_url and link["href"] != "/":
                     if full_url.endswith(".pdf"):
                         # Download pdf
-                        download_pdf(full_url, visited_pdf)
+                        download_pdf(full_url, visited_pdf, path_data)
                     # if no extension and not already visited
                     elif (len(full_url.split("/")[-1].split(".")) == 1) and (
                         full_url.split("//")[-1] not in visited

@@ -1,8 +1,9 @@
-import re
 import json
+import re
 from pathlib import Path
 from typing import List
 
+from bs4 import BeautifulSoup
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import (
     DirectoryLoader,
@@ -12,12 +13,11 @@ from langchain_community.document_loaders import (
 from langchain_core.documents.base import Document
 from langchain_text_splitters import MarkdownHeaderTextSplitter
 from markdownify import markdownify as md
-from tqdm import tqdm
-from bs4 import BeautifulSoup
 from sklearn.metrics.pairwise import cosine_similarity
+from tqdm import tqdm
 
+from rag_drias.embedding import Embedding
 from rag_drias.settings import PATH_MENU_JSON
-from rag_drias.embedding import TypeEmbedding
 
 
 def replace_many_newlines(string: str) -> str:
@@ -125,10 +125,10 @@ def clean_drias_doc(doc_str: str) -> str:
     if doc_str == "Expired session":
         doc_str = ""
 
-    doc_str = doc_str.replace("\-", "-")
-    doc_str = doc_str.replace("\_", "_")
-    doc_str = doc_str.replace("\[", "[")
-    doc_str = doc_str.replace("**", "")
+    doc_str = doc_str.replace(r"\-", "-")
+    doc_str = doc_str.replace(r"\_", "_")
+    doc_str = doc_str.replace(r"\[", "[")
+    doc_str = doc_str.replace(r"**", "")
 
     lines = doc_str.split("\n")
     for i, line in enumerate(lines):
@@ -222,7 +222,7 @@ def split_to_chunks(docs) -> list[str]:
 
 
 def filter_similar_chunks(
-    chunks: List[Document], embedding: TypeEmbedding, threshold: float = 0.98
+    chunks: List[Document], embedding: Embedding, threshold: float = 0.98
 ) -> List[Document]:
     """Returns a list of chunks with a similarity below a threshold"""
     chunks_embeddings = [
