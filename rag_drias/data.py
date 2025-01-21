@@ -8,7 +8,6 @@ from bs4 import BeautifulSoup
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import (
     DirectoryLoader,
-    PyPDFLoader,
     TextLoader,
 )
 from langchain_core.documents.base import Document
