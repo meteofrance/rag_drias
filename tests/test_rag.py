@@ -41,8 +41,9 @@ def test_create_chroma_db():
     unique_chunks = filter_similar_chunks(
         CHUNKS, get_embedding("sentence-transformers/all-MiniLM-L12-v2"), threshold=0.98
     )
-    embedding = get_embedding("sentence-transformers/all-MiniLM-L12-v2")
-    path_db = get_db_path(PATH_TMP)
+    embedding_model = "sentence-transformers/all-MiniLM-L12-v2"
+    embedding = get_embedding(embedding_model)
+    path_db = get_db_path(embedding_model, PATH_TMP)
     create_chroma_db(path_db, embedding, unique_chunks)
 
 
