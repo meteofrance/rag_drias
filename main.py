@@ -44,7 +44,9 @@ app = typer.Typer(pretty_exceptions_enable=False)
 # ----- Chroma Database -----
 
 
-def get_db_path(embedding_model: str = "sentence-camembert-large", path_db: Path = PATH_VDB) -> Path:
+def get_db_path(
+    embedding_model: str = "sentence-camembert-large", path_db: Path = PATH_VDB
+) -> Path:
     """Get path of the database."""
     return path_db / embedding_model
 
@@ -134,8 +136,6 @@ def rerank(
     # add a threshold to keep only the most relevant chunks
     indices = indices[scores > max(max_score**4, 1e-2)]
 
-    print(scores[scores > max(max_score**4,1e-3)])
-    
     return [docs[i] for i in indices]
 
 
@@ -182,11 +182,16 @@ def get_prompt_message(question: str, retrieved_infos: str) -> List[dict]:
                 "role": "system",
                 "content": "Le portail DRIAS (Donner accès aux scénarios climatiques Régionalisés français pour\
  l'Impact et l'Adaptation de nos Sociétés et environnement) mets à disposition les projections climatiques\
- régionalisées de référence, pour l'adaptation en France. Tu es un chatbot qui reponds aux questions sur le\
- site.",
+ régionalisées de référence, pour l'adaptation en France. Tu es un chatbot qui reponds uniquement aux questions sur le\
+ site. Si une question a aucun rapport avec le site, tu dois répondre 'Je suis le Chatbot du site DRIAS, je\
+ peux vous aider à comprendre et à utiliser les projections climatiques régionalisées de référence pour l'adaptation\
+ en France.'.",
             },
-            {"role": "user", "content": f"Réponds à cette question de manière claire et concise:\
- {question}\nRéponse:"},
+            {
+                "role": "user",
+                "content": f"Réponds à cette question de manière claire et concise:\
+ {question}\nRéponse:",
+            },
         ]
     return message
 

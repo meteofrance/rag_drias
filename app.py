@@ -1,6 +1,7 @@
 import os
 
 import streamlit as st
+
 from rag_drias.settings import PATH_VDB
 
 # Add IS_STREAMLIT to the environment

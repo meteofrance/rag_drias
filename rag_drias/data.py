@@ -3,6 +3,7 @@ import re
 from pathlib import Path
 from typing import List
 
+import pymupdf4llm
 from bs4 import BeautifulSoup
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import (
@@ -18,7 +19,7 @@ from tqdm import tqdm
 
 from rag_drias.embedding import Embedding
 from rag_drias.settings import PATH_MENU_JSON
-import pymupdf4llm
+
 
 def replace_many_newlines(string: str) -> str:
     """Replace many newlines with two newlines or two newlines with one newline."""
@@ -169,7 +170,7 @@ def create_docs_html(source_html_path: Path) -> List[Document]:
 
 def create_docs_pdf(source_pdf_path: Path) -> List[Document]:
     """Load every .pdf file in the source directory into a langchain document"""
-    print(f"Loading pdf files from {source_pdf_path}...")    
+    print(f"Loading pdf files from {source_pdf_path}...")
     docs = []
     for source_pdf_path in source_pdf_path.glob("*.pdf"):
         md_text = pymupdf4llm.to_markdown(source_pdf_path)
@@ -187,6 +188,7 @@ def create_docs(path_data: Path) -> List[Document]:
     html_paths = path_data / "HTMLs"
     pdf_paths = path_data / "PDFs"
     return create_docs_html(html_paths) + create_docs_pdf(pdf_paths)
+
 
 def split_to_paragraphs(docs: List[Document]):
     """Split Markdown documents to paragraphs using md headers."""
