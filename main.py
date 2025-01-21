@@ -1,4 +1,5 @@
 import shutil
+import warnings
 from pathlib import Path
 from typing import List
 
@@ -95,6 +96,9 @@ def load_reranker(model_name: str):
         rerank_tokenizer = AutoTokenizer.from_pretrained(path_reranker)
         rerank_model = AutoModelForSequenceClassification.from_pretrained(path_reranker)
     except OSError:
+        warnings.warn(
+            f"\033[31mModel {model_name} not found locally. Downloading from HuggingFace.\033[0m"
+        )
         rerank_tokenizer = AutoTokenizer.from_pretrained(
             model_name, trust_remote_code=True
         )
@@ -174,6 +178,8 @@ def get_prompt_message(question: str, retrieved_infos: str) -> List[dict]:
                 "role": "user",
                 "content": f"Avec les informations suivantes si utiles: {retrieved_infos}\nRéponds à cette question\
  de manière claire et concise: {question}\nRéponse:",
+                "content": f"Avec les informations suivantes si utiles: {retrieved_infos}\nRéponds à cette question\
+ de manière claire et concise: {question}\nRéponse:",
             },
         ]
     else:
@@ -204,10 +210,12 @@ def load_llm(generative_model: str) -> tuple:
         model = AutoModelForCausalLM.from_pretrained(
             path_llm,
             torch_dtype=torch.bfloat16,
-            trust_remote_code=True,  # Allow using code that was not written by HuggingFace
         ).to(device)
         tokenizer = AutoTokenizer.from_pretrained(path_llm)
     except OSError:
+        warnings.warn(
+            f"\033[31mModel {generative_model} not found locally. Downloading from HuggingFace.\033[0m"
+        )
         model = AutoModelForCausalLM.from_pretrained(
             generative_model,
             torch_dtype=torch.bfloat16,
