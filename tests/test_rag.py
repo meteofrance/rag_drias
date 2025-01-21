@@ -2,7 +2,7 @@ from pathlib import Path
 
 from langchain_core.documents.base import Document
 
-from main import answer, create_chroma_db, query, rerank
+from main import answer, create_chroma_db, get_db_path, query, rerank
 from rag_drias.crawler import crawl_website
 from rag_drias.data import filter_similar_chunks
 from rag_drias.embedding import get_embedding
@@ -42,7 +42,8 @@ def test_create_chroma_db():
         CHUNKS, get_embedding("sentence-transformers/all-MiniLM-L12-v2"), threshold=0.98
     )
     embedding = get_embedding("sentence-transformers/all-MiniLM-L12-v2")
-    create_chroma_db(PATH_TMP, embedding, unique_chunks)
+    path_db = get_db_path(PATH_TMP)
+    create_chroma_db(path_db, embedding, unique_chunks)
 
 
 def test_crawl():
@@ -61,9 +62,7 @@ def test_reranker():
         k=3,
     )
     assert (
-        ranking_chunks[0] == unique_chunks[1]
-        and ranking_chunks[1] == unique_chunks[2]
-        and ranking_chunks[2] == unique_chunks[0]
+        ranking_chunks[0] == unique_chunks[1] and ranking_chunks[1] == unique_chunks[2]
     )
 
 
