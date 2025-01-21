@@ -50,15 +50,6 @@ else:
     # Sidebar
     st.sidebar.title("Parameters")
 
-    n_samples = st.sidebar.slider(
-        "Number of retrieved chunks :",
-        min_value=5,
-        max_value=100,
-        value=40,
-        help="Nombre de morceaux de documents provenant du site DRIAS récupérés pour chaque question.\nPlus le nombre\
-             est grand, plus le chatbot aura de contexte mais plus le temps de calcul sera long.\nLorsque le nombre de\
-             morceaux est élevé, il est recommandé d'utiliser un modèle de reranking.",
-    )
     use_rag = st.sidebar.checkbox(
         "Use rag",
         value=True,
@@ -66,15 +57,29 @@ else:
              basant sur des morceaux de documents récupérés.\nSi cette option est désactivée, le chatbot générera des\
              réponses sans se baser sur le site DRIAS.",
     )
+
     generative_model = st.sidebar.selectbox(
         "Choose a generative model:",
         ["Llama-3.2-3B-Instruct", "Chocolatine-3B-Instruct-DPO-v1.0"],
         help="Modèle de génération de texte utilisé pour répondre aux questions. \nLLama-3.2-3B-Instruct\
              est recommandé.",
     )
+
+    n_samples = st.sidebar.slider(
+        "Number of retrieved chunks :",
+        min_value=5,
+        max_value=100,
+        value=40,
+        disabled=not use_rag,
+        help="Nombre de morceaux de documents provenant du site DRIAS récupérés pour chaque question.\nPlus le nombre\
+             est grand, plus le chatbot aura de contexte mais plus le temps de calcul sera long.\nLorsque le nombre de\
+             morceaux est élevé, il est recommandé d'utiliser un modèle de reranking.",
+    )
+
     reranker_model = st.sidebar.selectbox(
         "Choose a reranker model:",
         ["bge-reranker-v2-m3", "No reranker"],
+        disabled=not use_rag,
         help="Modèle de reranking utilisé selctionner les morceaux de documents les plus important parmis ceux\
              recupérés et les classer par ordre de pertinence. \nUtiliser un modèle de reranking permet d'améliorer\
              la qualité des réponses mais augmente le temps de calcul.\nIl est recommandé d'utiliser un modèle de\
@@ -87,6 +92,7 @@ else:
     use_pdf = st.sidebar.checkbox(
         "PDFs in database",
         value=False,
+        disabled=not use_rag,
         help="Si cette option est activée, les PDFs qui sont en lien sur le portail DRIAS seront dans la base\
              de données utilisée pour le RAG. Cela permet d'avoir plus d'informations mais celles ci ne sont pas\
              toujours pertinentes.",
