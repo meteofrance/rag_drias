@@ -6,10 +6,7 @@ from typing import List
 import pymupdf4llm
 from bs4 import BeautifulSoup
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.document_loaders import (
-    DirectoryLoader,
-    TextLoader,
-)
+from langchain_community.document_loaders import DirectoryLoader, TextLoader
 from langchain_core.documents.base import Document
 from langchain_text_splitters import MarkdownHeaderTextSplitter
 from markdownify import markdownify as md
