@@ -178,8 +178,6 @@ def get_prompt_message(question: str, retrieved_infos: str) -> List[dict]:
                 "role": "user",
                 "content": f"Avec les informations suivantes si utiles: {retrieved_infos}\nRéponds à cette question\
  de manière claire et concise: {question}\nRéponse:",
-                "content": f"Avec les informations suivantes si utiles: {retrieved_infos}\nRéponds à cette question\
- de manière claire et concise: {question}\nRéponse:",
             },
         ]
     else:
