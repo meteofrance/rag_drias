@@ -13,10 +13,11 @@ from langchain_community.document_loaders import (
 from langchain_core.documents.base import Document
 from langchain_text_splitters import MarkdownHeaderTextSplitter
 from markdownify import markdownify as md
-from rag_drias.embedding import Embedding
-from rag_drias.settings import PATH_MENU_JSON
 from sklearn.metrics.pairwise import cosine_similarity
 from tqdm import tqdm
+
+from rag_drias.embedding import Embedding
+from rag_drias.settings import PATH_MENU_JSON
 
 
 def replace_many_newlines(string: str) -> str:

@@ -8,6 +8,7 @@ from typing import List
 
 import requests
 from bs4 import BeautifulSoup
+
 from rag_drias.settings import MENU_URL, PATH_DATA, PATH_MENU_JSON, SECTION_URL
 
 ssl._create_default_https_context = ssl._create_unverified_context

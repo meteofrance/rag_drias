@@ -4,9 +4,10 @@ from typing import List
 import numpy as np
 import torch
 from langchain_core.embeddings import Embeddings
-from rag_drias.settings import PATH_MODELS
 from tqdm import tqdm
 from transformers import AutoModel, AutoTokenizer
+
+from rag_drias.settings import PATH_MODELS
 
 if torch.cuda.is_available():
     device = torch.device("cuda")
