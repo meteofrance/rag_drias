@@ -3,13 +3,10 @@ import re
 from pathlib import Path
 from typing import List
 
+import pymupdf4llm
 from bs4 import BeautifulSoup
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.document_loaders import (
-    DirectoryLoader,
-    PyPDFLoader,
-    TextLoader,
-)
+from langchain_community.document_loaders import DirectoryLoader, TextLoader
 from langchain_core.documents.base import Document
 from langchain_text_splitters import MarkdownHeaderTextSplitter
 from markdownify import markdownify as md
@@ -134,9 +131,9 @@ def clean_drias_doc(doc_str: str) -> str:
     for i, line in enumerate(lines):
         if line == " No translation available yet":
             line = ""
-        line = re.sub(r"\|(\s*(---)?\s*\|)+\s*", "", line)
+        line = re.sub(r"\|(\s*(-{3,})?\s*\|)+\s*", "", line)
         line = re.sub(r"(\|\s*\|\s*\*\s*)+\+", "", line)
-        line = re.sub(r"^(##)?(---)?\*?\s*$", "", line)
+        line = re.sub(r"^(##)?(-{3,})?\*?\s*$", "", line)
         line = re.sub(r"\s{4}", " ", line)
         line = re.sub(r"#{4,}", "####", line)
 
@@ -169,21 +166,24 @@ def create_docs_html(source_html_path: Path) -> List[Document]:
 
 def create_docs_pdf(source_pdf_path: Path) -> List[Document]:
     """Load every .pdf file in the source directory into a langchain document"""
-    loader = DirectoryLoader(source_pdf_path, glob="*.pdf", loader_cls=PyPDFLoader)
-    docs = loader.load()
-    for doc in tqdm(docs, desc="Cleaning docs"):
-        doc.page_content = md(doc.page_content, heading_style="ATX", strip=["a"])
-        doc.page_content = replace_many_newlines(doc.page_content)
-        title = doc.page_content.partition("\n")[0][2:]  # Doesn't work for space pages
-        doc.metadata["title"] = title
-    print(f"{len(docs)} pdf pages loaded from {source_pdf_path}")
+    print(f"Loading pdf files from {source_pdf_path}...")
+    docs = []
+    for source_pdf_path in source_pdf_path.glob("*.pdf"):
+        md_text = pymupdf4llm.to_markdown(source_pdf_path)
+        clean_text = clean_drias_doc(md_text)
+        clean_text = re.sub(r"(?<![.!?:])\n+(?=[a-zà-ÿ0-9 '\(])", " ", clean_text)
+        doc = Document(page_content=clean_text)
+        doc.metadata["title"] = Path(source_pdf_path).stem
+        doc.metadata["url"] = Path(source_pdf_path).name
+        docs.append(doc)
     return docs
 
 
 def create_docs(path_data: Path) -> List[Document]:
     """Load every document in the source directory into a langchain document"""
     html_paths = path_data / "HTMLs"
-    return create_docs_html(html_paths)
+    pdf_paths = path_data / "PDFs"
+    return create_docs_html(html_paths) + create_docs_pdf(pdf_paths)
 
 
 def split_to_paragraphs(docs: List[Document]):

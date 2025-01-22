@@ -45,9 +45,11 @@ app = typer.Typer(pretty_exceptions_enable=False)
 # ----- Chroma Database -----
 
 
-def get_db_path(embedding_model: str = "sentence-camembert-large") -> Path:
+def get_db_path(
+    embedding_model: str = "sentence-camembert-large", path_db: Path = PATH_VDB
+) -> Path:
     """Get path of the database."""
-    return PATH_VDB / embedding_model
+    return path_db / embedding_model
 
 
 def create_chroma_db(
@@ -74,10 +76,9 @@ def create_chroma_db(
 
 
 @cache_resource
-def load_chroma_db(embedding_name: str, path_db: Path = None) -> Chroma:
+def load_chroma_db(embedding_name: str, path_db: Path = PATH_VDB) -> Chroma:
     """Load the Chroma vector database."""
-    if path_db is None:
-        path_db = get_db_path(embedding_name)
+    path_db = get_db_path(embedding_name, path_db)
     embedding = get_embedding(embedding_name)
     if not (path_db.exists() and any(path_db.iterdir())):
         raise FileExistsError(f"Vector database {path_db} needs to be prepared.")
@@ -131,7 +132,14 @@ def rerank(
             )
             .float()
         )
-    _, indices = scores.topk(k)
+    scores, indices = scores.topk(k)
+
+    # map scores to float values between 0 and 1 by a sigmoid function
+    scores = torch.sigmoid(scores).cpu().numpy()
+    max_score = scores.max()
+    # add a threshold to keep only the most relevant chunks
+    indices = indices[scores > max(max_score**4, 1e-2)]
+
     return [docs[i] for i in indices]
 
 
@@ -161,9 +169,10 @@ def get_prompt_message(question: str, retrieved_infos: str) -> List[dict]:
         message = [
             {
                 "role": "system",
-                "content": "Le portail DRIAS mets à disposition les projections climatiques régionalisées de référence\
-, pour l'adaptation en France. Tu es un chatbot qui reponds aux questions à l'aide d'informations\
- récupérées sur le site.",
+                "content": "Le portail DRIAS (Donner accès aux scénarios climatiques Régionalisés français pour\
+ l'Impact et l'Adaptation de nos Sociétés et environnement) mets à disposition les projections climatiques\
+ régionalisées de référence, pour l'adaptation en France. Tu es un chatbot qui reponds aux questions à l'aide\
+ d'informations récupérées sur le site.",
             },
             {
                 "role": "user",
@@ -175,10 +184,18 @@ def get_prompt_message(question: str, retrieved_infos: str) -> List[dict]:
         message = [
             {
                 "role": "system",
-                "content": "Le portail DRIAS mets à disposition les projections climatiques régionalisées de référence\
-, pour l'adaptation en France. Tu es un chatbot qui reponds aux questions sur le site.",
+                "content": "Le portail DRIAS (Donner accès aux scénarios climatiques Régionalisés français pour\
+ l'Impact et l'Adaptation de nos Sociétés et environnement) mets à disposition les projections climatiques\
+ régionalisées de référence, pour l'adaptation en France. Tu es un chatbot qui reponds uniquement aux questions sur le\
+ site. Si une question a aucun rapport avec le site, tu dois répondre 'Je suis le Chatbot du site DRIAS, je\
+ peux vous aider à comprendre et à utiliser les projections climatiques régionalisées de référence pour l'adaptation\
+ en France.'.",
             },
-            {"role": "user", "content": f"Réponds à cette question: {question}"},
+            {
+                "role": "user",
+                "content": f"Réponds à cette question de manière claire et concise:\
+ {question}\nRéponse:",
+            },
         ]
     return message
 
@@ -230,6 +247,7 @@ def crawl(max_depth: int = 3) -> None:
 def prepare_database(
     embedding_model: str = "sentence-camembert-large",
     overwrite: bool = False,
+    path_db: Path = None,
 ) -> None:
     """Prepare the Chroma vector database by chunking and embedding all the text data.
 
@@ -242,7 +260,8 @@ def prepare_database(
     chunks = data.split_to_chunks(docs)
     embedding = get_embedding(embedding_model)
     chunks = data.filter_similar_chunks(chunks, embedding)
-    path_db = get_db_path(embedding_model)
+    if path_db is None:
+        path_db = get_db_path(embedding_model)
     create_chroma_db(path_db, embedding, chunks, overwrite)
 
 
