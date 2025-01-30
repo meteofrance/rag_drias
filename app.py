@@ -60,7 +60,11 @@ else:
 
     generative_model = st.sidebar.selectbox(
         "Choose a generative model:",
-        ["Llama-3.2-3B-Instruct", "Chocolatine-3B-Instruct-DPO-v1.0"],
+        [
+            "Llama-3.2-3B-Instruct",
+            "Chocolatine-3B-Instruct-DPO-v1.0",
+            "DeepSeek-R1-Distill-Llama-8B",
+        ],
         help="Modèle de génération de texte utilisé pour répondre aux questions. \nLLama-3.2-3B-Instruct\
              est recommandé.",
     )
