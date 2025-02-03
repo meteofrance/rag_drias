@@ -172,6 +172,7 @@ def create_docs_pdf(source_pdf_path: Path) -> List[Document]:
         md_text = pymupdf4llm.to_markdown(source_pdf_path)
         clean_text = clean_drias_doc(md_text)
         clean_text = re.sub(r"(?<![.!?:])\n+(?=[a-zà-ÿ0-9 '\(])", " ", clean_text)
+        clean_text = re.sub(r".{4,}", " ", clean_text)
         doc = Document(page_content=clean_text)
         doc.metadata["title"] = Path(source_pdf_path).stem
         doc.metadata["url"] = Path(source_pdf_path).name
@@ -184,7 +185,6 @@ def create_docs(path_data: Path) -> List[Document]:
     html_paths = path_data / "HTMLs"
     pdf_paths = path_data / "PDFs"
     return create_docs_html(html_paths) + create_docs_pdf(pdf_paths)
-
 
 def split_to_paragraphs(docs: List[Document]):
     """Split Markdown documents to paragraphs using md headers."""

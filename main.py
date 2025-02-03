@@ -6,6 +6,7 @@ from typing import List
 import torch
 import transformers
 import typer
+import pickle
 from langchain_chroma import Chroma
 from langchain_core.documents.base import Document
 from transformers import (
@@ -17,8 +18,9 @@ from transformers import (
 from rag_drias import data
 from rag_drias.crawler import crawl_website
 from rag_drias.embedding import Embedding, get_embedding
-from rag_drias.settings import BASE_URL, PATH_DATA, PATH_MODELS, PATH_VDB
-
+from rag_drias.settings import BASE_URL, PATH_DATA, PATH_MODELS, BASE_PATH
+from langchain_community.retrievers import BM25Retriever
+from langchain.retrievers import EnsembleRetriever
 if torch.cuda.is_available():
     device = torch.device("cuda")
 else:
@@ -46,19 +48,20 @@ app = typer.Typer(pretty_exceptions_enable=False)
 
 
 def get_db_path(
-    embedding_model: str = "sentence-camembert-large", path_db: Path = PATH_VDB
+    embedding_model: str = "sentence-camembert-large", base_path: Path = BASE_PATH
 ) -> Path:
     """Get path of the database."""
-    return path_db / embedding_model
+    return base_path / "chroma_database" / embedding_model
 
 
 def create_chroma_db(
-    path_db: Path,
+    base_path: Path,
     embedding: Embedding,
     docs: List[Document],
     overwrite: bool = False,
 ):
     """Create a vector database from the documents"""
+    path_db = get_db_path(embedding.name, base_path)
     if overwrite and path_db.exists():
         shutil.rmtree(path_db)
     path_db.mkdir(parents=True, exist_ok=True)
@@ -76,15 +79,35 @@ def create_chroma_db(
 
 
 @cache_resource
-def load_chroma_db(embedding_name: str, path_db: Path = PATH_VDB) -> Chroma:
+def load_chroma_db(embedding_name: str, base_path: Path = BASE_PATH) -> Chroma:
     """Load the Chroma vector database."""
-    path_db = get_db_path(embedding_name, path_db)
+    path_db = get_db_path(embedding_name, base_path)
     embedding = get_embedding(embedding_name)
     if not (path_db.exists() and any(path_db.iterdir())):
         raise FileExistsError(f"Vector database {path_db} needs to be prepared.")
     return Chroma(embedding_function=embedding, persist_directory=str(path_db))
 
+def create_bm25_idx(
+    base_path: Path,
+    docs: List[Document]
+):
+    """Create a bm25 index from the documents"""
+    path_bm25 = base_path / "bm25_index.pkl"
+    retriever = BM25Retriever.from_documents(docs)
+    with open(path_bm25, "wb") as f:
+        pickle.dump(retriever, f)
 
+@cache_resource
+def load_bm25_idx(base_path: Path = BASE_PATH) -> BM25Retriever:
+    """Load the bm25 index."""
+    path_bm25 = base_path / "bm25_index.pkl" 
+    if not path_bm25.exists():
+        raise FileExistsError(f"BM25 index {path_bm25} needs to be prepared.")
+    with open(path_bm25, "rb") as f:
+        retriever = pickle.load(f)
+    return retriever
+
+    
 # ----- RAG -----
 
 
@@ -146,20 +169,24 @@ def rerank(
 def retrieve(
     text: str,
     vectordb: Chroma,
+    retriever_bm25: BM25Retriever,
     n_samples: int,
     reranker: str = "",
 ) -> List[Document]:
     """Retrieve the most relevant chunks in relation to the query."""
+    retriever_db = vectordb.as_retriever(search_kwargs={"k": n_samples})
+    retriever_bm25.k = n_samples
+    ensemble_retriever = EnsembleRetriever(
+        retrievers=[retriever_db, retriever_bm25],
+        weights=[0.7, 0.3]
+        )
+    chunks = ensemble_retriever.invoke(text)[:n_samples]
+    # chunks = vectordb.similarity_search(text, k=n_samples)
     if reranker != "":
-        chunks = vectordb.similarity_search(text, k=n_samples)
         chunks = rerank(reranker, text, chunks, k=n_samples // 2)
         # we return the chunks by ascending score because we get better results
         # when the relevant chunks are closer to the question
         chunks.reverse()
-    else:
-        chunks = vectordb.max_marginal_relevance_search(
-            text, k=n_samples, fetch_k=int(n_samples * 1.5)
-        )
     return chunks
 
 
@@ -247,7 +274,7 @@ def crawl(max_depth: int = 3) -> None:
 def prepare_database(
     embedding_model: str = "sentence-camembert-large",
     overwrite: bool = False,
-    path_db: Path = None,
+    base_path: Path = BASE_PATH,
 ) -> None:
     """Prepare the Chroma vector database by chunking and embedding all the text data.
 
@@ -260,9 +287,8 @@ def prepare_database(
     chunks = data.split_to_chunks(docs)
     embedding = get_embedding(embedding_model)
     chunks = data.filter_similar_chunks(chunks, embedding)
-    if path_db is None:
-        path_db = get_db_path(embedding_model)
-    create_chroma_db(path_db, embedding, chunks, overwrite)
+    create_bm25_idx(base_path, chunks)
+    create_chroma_db(base_path, embedding, chunks, overwrite)
 
 
 @app.command()
@@ -271,7 +297,7 @@ def query(
     embedding_name: str = "sentence-camembert-large",
     n_samples: int = 4,
     reranker: str = "",
-    path_db: Path = None,
+    base_path: Path = BASE_PATH,
 ) -> List[Document]:
     """Makes a query to the vector database and retrieves the closest chunks.
 
@@ -280,8 +306,9 @@ def query(
         embedding_name (str, optional): Embedding model name. Defaults to "Camembert".
         data_source (str, optional): Name of the data source. Defaults to "Drias".
     """
-    vectordb = load_chroma_db(embedding_name, path_db)
-    chunks = retrieve(text, vectordb, n_samples, reranker)
+    vectordb = load_chroma_db(embedding_name, base_path)
+    retriever_bm25 = load_bm25_idx(base_path)
+    chunks = retrieve(text, vectordb, retriever_bm25, n_samples, reranker)
     for i, chunk in enumerate(chunks):
         print(f"---> Relevant chunk {i} <---")
         data.print_doc(chunk)
@@ -297,7 +324,7 @@ def answer(
     n_samples: int = 10,
     use_rag: bool = True,
     reranker: str = "",
-    path_db: Path = None,
+    base_path: Path = BASE_PATH,
     max_new_tokens: int = 500,
 ) -> str:
     """Generate answer to a question using RAG and print it."""
@@ -306,8 +333,10 @@ def answer(
 
     retrieved_infos = ""
     if use_rag:
-        vectordb = load_chroma_db(embedding_model, path_db)
-        chunks = retrieve(question, vectordb, n_samples, reranker)
+        vectordb = load_chroma_db(embedding_model, base_path)
+        retriever_bm25 = load_bm25_idx(base_path)
+        retriever_bm25 = None
+        chunks = retrieve(question, vectordb, retriever_bm25, n_samples, reranker)
 
         for chunk in chunks:
             retrieved_infos += f"\n-- Page Title : {chunk.metadata['title']} --\n"
