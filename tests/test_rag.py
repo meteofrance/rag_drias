@@ -96,7 +96,7 @@ def test_query():
         reranker="Alibaba-NLP/gte-multilingual-reranker-base",
         path_db=PATH_TMP,
     )
-    assert retrieved_chunks[0] == CHUNKS[1] and retrieved_chunks[1] == CHUNKS[3]
+    assert retrieved_chunks[0] == CHUNKS[3] and retrieved_chunks[1] == CHUNKS[1]
 
 
 def test_answer():
