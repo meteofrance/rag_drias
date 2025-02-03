@@ -1,9 +1,9 @@
-import pickle
 import shutil
 import warnings
 from pathlib import Path
 from typing import List
 
+import joblib
 import torch
 import transformers
 import typer
@@ -109,10 +109,10 @@ def create_bm25_idx(
         path_db = path_db / "with_pdfs"
     else:
         path_db = path_db / "without_pdfs"
-    path_bm25 = path_db / "bm25_index.pkl"
+    path_bm25 = path_db / "bm25_index.json"
     retriever = BM25Retriever.from_documents(docs)
     with open(path_bm25, "wb") as f:
-        pickle.dump(retriever, f)
+        joblib.dump(retriever, f)
 
 
 @cache_resource
@@ -122,11 +122,11 @@ def load_bm25_idx(path_db: Path = PATH_DB, use_pdf: bool = False) -> BM25Retriev
         path_db = path_db / "with_pdfs"
     else:
         path_db = path_db / "without_pdfs"
-    path_bm25 = path_db / "bm25_index.pkl"
+    path_bm25 = path_db / "bm25_index.json"
     if not path_bm25.exists():
         raise FileExistsError(f"BM25 index {path_bm25} needs to be prepared.")
     with open(path_bm25, "rb") as f:
-        retriever = pickle.load(f)
+        retriever = joblib.load(f)
     return retriever
 
 
