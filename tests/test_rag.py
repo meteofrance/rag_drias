@@ -92,7 +92,7 @@ def test_query():
     retrieved_chunks = query(
         text="Qu'es-ce qu'un chat ?",
         embedding_name="sentence-transformers/all-MiniLM-L12-v2",
-        n_samples=4,
+        n_samples=2,
         reranker="Alibaba-NLP/gte-multilingual-reranker-base",
         path_db=PATH_TMP,
     )
@@ -104,7 +104,7 @@ def test_answer():
         question="Qu'es-ce qu'un chat ?",
         embedding_model="sentence-transformers/all-MiniLM-L12-v2",
         generative_model="tiiuae/Falcon3-1B-Instruct",
-        n_samples=4,
+        n_samples=2,
         path_db=PATH_TMP,
         max_new_tokens=5,
     )
