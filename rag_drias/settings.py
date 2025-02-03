@@ -8,6 +8,5 @@ SECTION_URL = f"{BASE_URL}/accompagnement/sections"
 
 PATH_DATA = BASE_PATH / "text_data"
 PATH_MENU_JSON = PATH_DATA / "getAllTopSectionsJson.json"
-PATH_VDB = BASE_PATH / "chroma_database"
-PATH_BM25 = BASE_PATH / "bm25_index.pkl"
+PATH_DB = BASE_PATH / "database"
 PATH_MODELS = BASE_PATH / "hf_models"

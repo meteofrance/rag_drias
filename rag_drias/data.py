@@ -180,11 +180,14 @@ def create_docs_pdf(source_pdf_path: Path) -> List[Document]:
     return docs
 
 
-def create_docs(path_data: Path) -> List[Document]:
+def create_docs(path_data: Path, use_pdf: bool) -> List[Document]:
     """Load every document in the source directory into a langchain document"""
     html_paths = path_data / "HTMLs"
+    if not use_pdf:
+        return create_docs_html(html_paths)
     pdf_paths = path_data / "PDFs"
     return create_docs_html(html_paths) + create_docs_pdf(pdf_paths)
+
 
 def split_to_paragraphs(docs: List[Document]):
     """Split Markdown documents to paragraphs using md headers."""

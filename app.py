@@ -2,7 +2,7 @@ import os
 
 import streamlit as st
 
-from rag_drias.settings import PATH_VDB
+from rag_drias.settings import PATH_DB
 
 # Add IS_STREAMLIT to the environment
 os.environ["IS_STREAMLIT"] = "True"
@@ -98,11 +98,6 @@ else:
              toujours pertinentes.",
     )
 
-    if use_pdf:
-        path_db = PATH_VDB / "with_pdfs"
-    else:
-        path_db = PATH_VDB
-
     # Initialize chat history
     if "messages" not in st.session_state:
         st.session_state.messages = []
@@ -128,7 +123,7 @@ else:
                 n_samples=n_samples,
                 use_rag=use_rag,
                 reranker=reranker_model,
-                path_db=path_db,
+                use_pdf=use_pdf,
             )
 
             yield response

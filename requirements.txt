@@ -7,5 +7,5 @@ coverage==7.6.3
 pytest==8.3.3
 scikit-learn==1.4.2
 pymupdf4llm==0.0.17
-langchain
-rank_bm25
+langchain==0.2.17
+rank_bm25==0.2.2
