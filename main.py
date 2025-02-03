@@ -222,7 +222,7 @@ def get_prompt_message(question: str, retrieved_infos: str) -> List[dict]:
             {
                 "role": "user",
                 "content": f"Avec les informations suivantes si utiles: {retrieved_infos}\nRéponds à cette question\
- de manière claire et concise: {question}\nRéponse:",
+ de manière claire et concise seulement si elle concerne le site: {question}\nRéponse:",
             },
         ]
     else:
@@ -238,7 +238,7 @@ def get_prompt_message(question: str, retrieved_infos: str) -> List[dict]:
             },
             {
                 "role": "user",
-                "content": f"Réponds à cette question de manière claire et concise:\
+                "content": f"Réponds à cette question de manière claire et concise seulement si elle concerne le site:\
  {question}\nRéponse:",
             },
         ]
@@ -345,7 +345,7 @@ def answer(
     use_rag: bool = True,
     reranker: str = "",
     path_db: Path = PATH_DB,
-    max_new_tokens: int = 500,
+    max_new_tokens: int = 700,
     use_pdf: bool = False,
 ) -> str:
     """Generate answer to a question using RAG and print it."""
@@ -377,7 +377,8 @@ def answer(
         max_new_tokens=max_new_tokens,
     )
     print(f"LLM output:\n{sequences[0]['generated_text'][len(prompt):]}")
-    return sequences[0]["generated_text"][len(prompt) :]
+    response = sequences[0]["generated_text"][len(prompt) :].split("</think>")[-1]
+    return response
 
 
 if __name__ == "__main__":
