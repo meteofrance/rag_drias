@@ -2,7 +2,7 @@ from pathlib import Path
 
 from langchain_core.documents.base import Document
 
-from main import answer, create_chroma_db, get_db_path, query, rerank
+from main import answer, create_bm25_idx, create_chroma_db, get_db_path, query, rerank
 from rag_drias.crawler import crawl_website
 from rag_drias.data import filter_similar_chunks
 from rag_drias.embedding import get_embedding
@@ -45,6 +45,14 @@ def test_create_chroma_db():
     embedding = get_embedding(embedding_model)
     path_db = get_db_path(embedding_model, PATH_TMP)
     create_chroma_db(path_db, embedding, unique_chunks)
+
+
+def test_create_bm25_idx():
+    unique_chunks = filter_similar_chunks(
+        CHUNKS, get_embedding("sentence-transformers/all-MiniLM-L12-v2"), threshold=0.98
+    )
+    create_bm25_idx(unique_chunks, PATH_TMP)
+    assert (PATH_TMP / "without_pdfs" / "bm25_index.pkl").exists()
 
 
 def test_crawl():

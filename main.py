@@ -191,13 +191,14 @@ def retrieve(
     retriever_bm25: BM25Retriever,
     n_samples: int,
     reranker: str = "",
+    alpha: float = 0.7,  # weight of the chroma retriever in the ensemble retriever
 ) -> List[Document]:
     """Retrieve the most relevant chunks in relation to the query."""
     retriever_db = vectordb.as_retriever(search_kwargs={"k": n_samples})
     retriever_bm25.k = n_samples
     # Hybride search : sparse search with BM25 and dense search with Chroma
     ensemble_retriever = EnsembleRetriever(
-        retrievers=[retriever_db, retriever_bm25], weights=[0.7, 0.3]
+        retrievers=[retriever_db, retriever_bm25], weights=[alpha, 1 - alpha]
     )
     chunks = ensemble_retriever.invoke(text)[:n_samples]
     if reranker != "":
@@ -318,17 +319,22 @@ def query(
     reranker: str = "",
     path_db: Path = PATH_DB,
     use_pdf: bool = False,
+    alpha: float = 0.7,
 ) -> List[Document]:
     """Makes a query to the vector database and retrieves the closest chunks.
 
     Args:
         text (str): Your query.
         embedding_name (str, optional): Embedding model name. Defaults to "Camembert".
-        data_source (str, optional): Name of the data source. Defaults to "Drias".
+        n_samples (int, optional): Number of samples to retrieve. Defaults to 4.
+        reranker (str, optional): Reranker model name. Defaults to "" (no reranker).
+        path_db (Path, optional): Path to the database. Defaults to PATH_DB.
+        use_pdf (bool, optional): Whether to use pdfs. Defaults to False.
+        alpha (float, optional): Weight of the chroma retriever in the ensemble retriever. Defaults to 0.7.
     """
     vectordb = load_chroma_db(embedding_name, path_db, use_pdf)
     retriever_bm25 = load_bm25_idx(path_db, use_pdf)
-    chunks = retrieve(text, vectordb, retriever_bm25, n_samples, reranker)
+    chunks = retrieve(text, vectordb, retriever_bm25, n_samples, reranker, alpha)
     for i, chunk in enumerate(chunks):
         print(f"---> Relevant chunk {i} <---")
         data.print_doc(chunk)
@@ -347,8 +353,22 @@ def answer(
     path_db: Path = PATH_DB,
     max_new_tokens: int = 700,
     use_pdf: bool = False,
+    alpha: float = 0.7,
 ) -> str:
-    """Generate answer to a question using RAG and print it."""
+    """Generate answer to a question using RAG and print it.
+
+    Args:
+        question (str): The question to answer.
+        embedding_model (str, optional): Embedding model name. Defaults to "sentence-camembert-large".
+        generative_model (str, optional): Generative model name. Defaults to "Llama-3.2-3B-Instruct".
+        n_samples (int, optional): Number of samples to retrieve. Defaults to 10.
+        use_rag (bool, optional): Whether to use RAG. Defaults to True.
+        reranker (str, optional): Reranker model name. Defaults to "".
+        path_db (Path, optional): Path to the database. Defaults to PATH_DB.
+        max_new_tokens (int, optional): Maximum number of tokens to generate. Defaults to 700.
+        use_pdf (bool, optional): Whether to use pdfs. Defaults to False.
+        alpha (float, optional): Weight of the chroma retriever in the ensemble retriever. Defaults to 0.7.
+    """
 
     tokenizer, pipeline = load_llm(generative_model)
 
@@ -356,7 +376,9 @@ def answer(
     if use_rag:
         vectordb = load_chroma_db(embedding_model, path_db, use_pdf)
         retriever_bm25 = load_bm25_idx(path_db, use_pdf)
-        chunks = retrieve(question, vectordb, retriever_bm25, n_samples, reranker)
+        chunks = retrieve(
+            question, vectordb, retriever_bm25, n_samples, reranker, alpha
+        )
 
         for chunk in chunks:
             retrieved_infos += f"\n-- Page Title : {chunk.metadata['title']} --\n"

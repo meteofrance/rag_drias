@@ -69,6 +69,17 @@ else:
              est recommandé.",
     )
 
+    alpha = st.sidebar.slider(
+        "Hybride search alpha :",
+        min_value=0.0,
+        max_value=1.0,
+        value=0.7,
+        disabled=not use_rag,
+        help="Paramètre de pondération entre la recherche semantique (vectorielle) et la recherche lexicale (BM25).\
+             \nUn alpha proche de 0 donnera plus de poids à la recherche lexicale et un alpha proche de 1 donnera plus\
+             de poids à la recherche semantique.",
+    )
+
     n_samples = st.sidebar.slider(
         "Number of retrieved chunks :",
         min_value=5,
@@ -128,6 +139,7 @@ else:
                 use_rag=use_rag,
                 reranker=reranker_model,
                 use_pdf=use_pdf,
+                alpha=alpha,
             )
 
             yield response
