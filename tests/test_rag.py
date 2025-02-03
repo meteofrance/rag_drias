@@ -2,14 +2,7 @@ from pathlib import Path
 
 from langchain_core.documents.base import Document
 
-from main import (
-    answer,
-    create_bm25_idx,
-    create_chroma_db,
-    get_db_path,
-    query,
-    rerank,
-)
+from main import answer, create_bm25_idx, create_chroma_db, get_db_path, query, rerank
 from rag_drias.crawler import crawl_website
 from rag_drias.data import filter_similar_chunks
 from rag_drias.embedding import get_embedding
