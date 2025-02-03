@@ -2,8 +2,6 @@ import os
 
 import streamlit as st
 
-from rag_drias.settings import PATH_DB
-
 # Add IS_STREAMLIT to the environment
 os.environ["IS_STREAMLIT"] = "True"
 from main import answer  # noqa: E402
