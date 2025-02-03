@@ -51,8 +51,8 @@ def test_create_bm25_idx():
     unique_chunks = filter_similar_chunks(
         CHUNKS, get_embedding("sentence-transformers/all-MiniLM-L12-v2"), threshold=0.98
     )
-    create_bm25_idx(unique_chunks, PATH_TMP)
-    assert (PATH_TMP / "without_pdfs" / "bm25_index.pkl").exists()
+    create_bm25_idx(PATH_TMP, unique_chunks)
+    assert (PATH_TMP / "without_pdfs" / "bm25_index.json").exists()
 
 
 def test_crawl():
