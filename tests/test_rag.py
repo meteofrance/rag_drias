@@ -84,19 +84,19 @@ def test_query():
         path_db=PATH_TMP,
     )
     assert (
-        retrieved_chunks[0] == CHUNKS[1]
-        and retrieved_chunks[1] == CHUNKS[3]
+        retrieved_chunks[0] == CHUNKS[3]
+        and retrieved_chunks[1] == CHUNKS[1]
         and retrieved_chunks[2] == CHUNKS[0]
     )
     # With reranker
     retrieved_chunks = query(
         text="Qu'es-ce qu'un chat ?",
         embedding_name="sentence-transformers/all-MiniLM-L12-v2",
-        n_samples=2,
+        n_samples=4,
         reranker="Alibaba-NLP/gte-multilingual-reranker-base",
         path_db=PATH_TMP,
     )
-    assert retrieved_chunks[0] == CHUNKS[3] and retrieved_chunks[1] == CHUNKS[1]
+    assert retrieved_chunks[0] == CHUNKS[1] and retrieved_chunks[1] == CHUNKS[3]
 
 
 def test_answer():
