@@ -96,6 +96,9 @@ def load_chroma_db(
     return Chroma(embedding_function=embedding, persist_directory=str(path_db))
 
 
+# ----- BM25 Index -----
+
+
 def create_bm25_idx(
     path_db: Path,
     docs: List[Document],
