@@ -3,10 +3,13 @@ import warnings
 from pathlib import Path
 from typing import List
 
+import joblib
 import torch
 import transformers
 import typer
+from langchain.retrievers import EnsembleRetriever
 from langchain_chroma import Chroma
+from langchain_community.retrievers import BM25Retriever
 from langchain_core.documents.base import Document
 from transformers import (
     AutoModelForCausalLM,
@@ -17,7 +20,7 @@ from transformers import (
 from rag_drias import data
 from rag_drias.crawler import crawl_website
 from rag_drias.embedding import Embedding, get_embedding
-from rag_drias.settings import BASE_URL, PATH_DATA, PATH_MODELS, PATH_VDB
+from rag_drias.settings import BASE_URL, PATH_DATA, PATH_DB, PATH_MODELS
 
 if torch.cuda.is_available():
     device = torch.device("cuda")
@@ -46,10 +49,14 @@ app = typer.Typer(pretty_exceptions_enable=False)
 
 
 def get_db_path(
-    embedding_model: str = "sentence-camembert-large", path_db: Path = PATH_VDB
+    embedding_model: str = "sentence-camembert-large",
+    path_db: Path = PATH_DB,
+    use_pdf: bool = False,
 ) -> Path:
     """Get path of the database."""
-    return path_db / embedding_model
+    if use_pdf:
+        return path_db / "with_pdfs" / "chroma_database" / embedding_model
+    return path_db / "without_pdfs" / "chroma_database" / embedding_model
 
 
 def create_chroma_db(
@@ -57,8 +64,10 @@ def create_chroma_db(
     embedding: Embedding,
     docs: List[Document],
     overwrite: bool = False,
+    use_pdf: bool = False,
 ):
     """Create a vector database from the documents"""
+    path_db = get_db_path(embedding.name, path_db, use_pdf)
     if overwrite and path_db.exists():
         shutil.rmtree(path_db)
     path_db.mkdir(parents=True, exist_ok=True)
@@ -76,13 +85,49 @@ def create_chroma_db(
 
 
 @cache_resource
-def load_chroma_db(embedding_name: str, path_db: Path = PATH_VDB) -> Chroma:
+def load_chroma_db(
+    embedding_name: str, path_db: Path = PATH_DB, use_pdf: bool = False
+) -> Chroma:
     """Load the Chroma vector database."""
-    path_db = get_db_path(embedding_name, path_db)
+    path_db = get_db_path(embedding_name, path_db, use_pdf)
     embedding = get_embedding(embedding_name)
     if not (path_db.exists() and any(path_db.iterdir())):
         raise FileExistsError(f"Vector database {path_db} needs to be prepared.")
     return Chroma(embedding_function=embedding, persist_directory=str(path_db))
+
+
+# ----- BM25 Index -----
+
+
+def create_bm25_idx(
+    path_db: Path,
+    docs: List[Document],
+    use_pdf: bool = False,
+):
+    """Create a bm25 index from the documents"""
+    if use_pdf:
+        path_db = path_db / "with_pdfs"
+    else:
+        path_db = path_db / "without_pdfs"
+    path_bm25 = path_db / "bm25_index.json"
+    retriever = BM25Retriever.from_documents(docs)
+    with open(path_bm25, "wb") as f:
+        joblib.dump(retriever, f)
+
+
+@cache_resource
+def load_bm25_idx(path_db: Path = PATH_DB, use_pdf: bool = False) -> BM25Retriever:
+    """Load the bm25 index."""
+    if use_pdf:
+        path_db = path_db / "with_pdfs"
+    else:
+        path_db = path_db / "without_pdfs"
+    path_bm25 = path_db / "bm25_index.json"
+    if not path_bm25.exists():
+        raise FileExistsError(f"BM25 index {path_bm25} needs to be prepared.")
+    with open(path_bm25, "rb") as f:
+        retriever = joblib.load(f)
+    return retriever
 
 
 # ----- RAG -----
@@ -146,20 +191,24 @@ def rerank(
 def retrieve(
     text: str,
     vectordb: Chroma,
+    retriever_bm25: BM25Retriever,
     n_samples: int,
     reranker: str = "",
+    alpha: float = 0.7,  # weight of the chroma retriever in the ensemble retriever
 ) -> List[Document]:
     """Retrieve the most relevant chunks in relation to the query."""
+    retriever_db = vectordb.as_retriever(search_kwargs={"k": n_samples})
+    retriever_bm25.k = n_samples
+    # Hybride search : sparse search with BM25 and dense search with Chroma
+    ensemble_retriever = EnsembleRetriever(
+        retrievers=[retriever_db, retriever_bm25], weights=[alpha, 1 - alpha]
+    )
+    chunks = ensemble_retriever.invoke(text)[:n_samples]
     if reranker != "":
-        chunks = vectordb.similarity_search(text, k=n_samples)
         chunks = rerank(reranker, text, chunks, k=n_samples // 2)
         # we return the chunks by ascending score because we get better results
         # when the relevant chunks are closer to the question
         chunks.reverse()
-    else:
-        chunks = vectordb.max_marginal_relevance_search(
-            text, k=n_samples, fetch_k=int(n_samples * 1.5)
-        )
     return chunks
 
 
@@ -247,7 +296,8 @@ def crawl(max_depth: int = 3) -> None:
 def prepare_database(
     embedding_model: str = "sentence-camembert-large",
     overwrite: bool = False,
-    path_db: Path = None,
+    path_db: Path = PATH_DB,
+    use_pdf: bool = False,
 ) -> None:
     """Prepare the Chroma vector database by chunking and embedding all the text data.
 
@@ -255,14 +305,13 @@ def prepare_database(
         embedding_model (Camembert or E5): Embedding model name. Defaults to Camembert.
         overwrite (bool, optional): Whether to overwrite database. Defaults to False.
     """
-    docs = data.create_docs(PATH_DATA)
+    docs = data.create_docs(PATH_DATA, use_pdf)
     docs = data.split_to_paragraphs(docs)
     chunks = data.split_to_chunks(docs)
     embedding = get_embedding(embedding_model)
     chunks = data.filter_similar_chunks(chunks, embedding)
-    if path_db is None:
-        path_db = get_db_path(embedding_model)
-    create_chroma_db(path_db, embedding, chunks, overwrite)
+    create_bm25_idx(path_db, chunks, use_pdf)
+    create_chroma_db(path_db, embedding, chunks, overwrite, use_pdf)
 
 
 @app.command()
@@ -271,17 +320,24 @@ def query(
     embedding_name: str = "sentence-camembert-large",
     n_samples: int = 4,
     reranker: str = "",
-    path_db: Path = None,
+    path_db: Path = PATH_DB,
+    use_pdf: bool = False,
+    alpha: float = 0.7,
 ) -> List[Document]:
     """Makes a query to the vector database and retrieves the closest chunks.
 
     Args:
         text (str): Your query.
         embedding_name (str, optional): Embedding model name. Defaults to "Camembert".
-        data_source (str, optional): Name of the data source. Defaults to "Drias".
+        n_samples (int, optional): Number of samples to retrieve. Defaults to 4.
+        reranker (str, optional): Reranker model name. Defaults to "" (no reranker).
+        path_db (Path, optional): Path to the database. Defaults to PATH_DB.
+        use_pdf (bool, optional): Whether to use pdfs. Defaults to False.
+        alpha (float, optional): Weight of the chroma retriever in the ensemble retriever. Defaults to 0.7.
     """
-    vectordb = load_chroma_db(embedding_name, path_db)
-    chunks = retrieve(text, vectordb, n_samples, reranker)
+    vectordb = load_chroma_db(embedding_name, path_db, use_pdf)
+    retriever_bm25 = load_bm25_idx(path_db, use_pdf)
+    chunks = retrieve(text, vectordb, retriever_bm25, n_samples, reranker, alpha)
     for i, chunk in enumerate(chunks):
         print(f"---> Relevant chunk {i} <---")
         data.print_doc(chunk)
@@ -297,17 +353,35 @@ def answer(
     n_samples: int = 10,
     use_rag: bool = True,
     reranker: str = "",
-    path_db: Path = None,
+    path_db: Path = PATH_DB,
     max_new_tokens: int = 700,
+    use_pdf: bool = False,
+    alpha: float = 0.7,
 ) -> str:
-    """Generate answer to a question using RAG and print it."""
+    """Generate answer to a question using RAG and print it.
+
+    Args:
+        question (str): The question to answer.
+        embedding_model (str, optional): Embedding model name. Defaults to "sentence-camembert-large".
+        generative_model (str, optional): Generative model name. Defaults to "Llama-3.2-3B-Instruct".
+        n_samples (int, optional): Number of samples to retrieve. Defaults to 10.
+        use_rag (bool, optional): Whether to use RAG. Defaults to True.
+        reranker (str, optional): Reranker model name. Defaults to "".
+        path_db (Path, optional): Path to the database. Defaults to PATH_DB.
+        max_new_tokens (int, optional): Maximum number of tokens to generate. Defaults to 700.
+        use_pdf (bool, optional): Whether to use pdfs. Defaults to False.
+        alpha (float, optional): Weight of the chroma retriever in the ensemble retriever. Defaults to 0.7.
+    """
 
     tokenizer, pipeline = load_llm(generative_model)
 
     retrieved_infos = ""
     if use_rag:
-        vectordb = load_chroma_db(embedding_model, path_db)
-        chunks = retrieve(question, vectordb, n_samples, reranker)
+        vectordb = load_chroma_db(embedding_model, path_db, use_pdf)
+        retriever_bm25 = load_bm25_idx(path_db, use_pdf)
+        chunks = retrieve(
+            question, vectordb, retriever_bm25, n_samples, reranker, alpha
+        )
 
         for chunk in chunks:
             retrieved_infos += f"\n-- Page Title : {chunk.metadata['title']} --\n"

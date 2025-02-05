@@ -24,6 +24,7 @@ class Embedding(Embeddings):
     def __init__(self, model_name):
         try:
             model_path = PATH_MODELS / model_name
+            self.name = model_name
             self.tokenizer = AutoTokenizer.from_pretrained(model_path)
             self.model = AutoModel.from_pretrained(model_path)
         except OSError:

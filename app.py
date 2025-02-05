@@ -2,8 +2,6 @@ import os
 
 import streamlit as st
 
-from rag_drias.settings import PATH_VDB
-
 # Add IS_STREAMLIT to the environment
 os.environ["IS_STREAMLIT"] = "True"
 from main import answer  # noqa: E402
@@ -69,6 +67,17 @@ else:
              est recommandé.",
     )
 
+    alpha = st.sidebar.slider(
+        "Hybride search alpha :",
+        min_value=0.0,
+        max_value=1.0,
+        value=0.7,
+        disabled=not use_rag,
+        help="Paramètre de pondération entre la recherche semantique (vectorielle) et la recherche lexicale (BM25).\
+             \nUn alpha proche de 0 donnera plus de poids à la recherche lexicale et un alpha proche de 1 donnera plus\
+             de poids à la recherche semantique.",
+    )
+
     n_samples = st.sidebar.slider(
         "Number of retrieved chunks :",
         min_value=5,
@@ -102,11 +111,6 @@ else:
              toujours pertinentes.",
     )
 
-    if use_pdf:
-        path_db = PATH_VDB / "with_pdfs"
-    else:
-        path_db = PATH_VDB
-
     # Initialize chat history
     if "messages" not in st.session_state:
         st.session_state.messages = []
@@ -132,7 +136,8 @@ else:
                 n_samples=n_samples,
                 use_rag=use_rag,
                 reranker=reranker_model,
-                path_db=path_db,
+                use_pdf=use_pdf,
+                alpha=alpha,
             )
 
             yield response

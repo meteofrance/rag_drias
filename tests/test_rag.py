@@ -2,7 +2,7 @@ from pathlib import Path
 
 from langchain_core.documents.base import Document
 
-from main import answer, create_chroma_db, get_db_path, query, rerank
+from main import answer, create_bm25_idx, create_chroma_db, get_db_path, query, rerank
 from rag_drias.crawler import crawl_website
 from rag_drias.data import filter_similar_chunks
 from rag_drias.embedding import get_embedding
@@ -47,6 +47,14 @@ def test_create_chroma_db():
     create_chroma_db(path_db, embedding, unique_chunks)
 
 
+def test_create_bm25_idx():
+    unique_chunks = filter_similar_chunks(
+        CHUNKS, get_embedding("sentence-transformers/all-MiniLM-L12-v2"), threshold=0.98
+    )
+    create_bm25_idx(PATH_TMP, unique_chunks)
+    assert (PATH_TMP / "without_pdfs" / "bm25_index.json").exists()
+
+
 def test_crawl():
     crawl_website(BASE_URL, max_depth=0, path_data=PATH_TMP)
     path_html = PATH_TMP / "HTMLs"
@@ -76,8 +84,8 @@ def test_query():
         path_db=PATH_TMP,
     )
     assert (
-        retrieved_chunks[0] == CHUNKS[1]
-        and retrieved_chunks[1] == CHUNKS[3]
+        retrieved_chunks[0] == CHUNKS[3]
+        and retrieved_chunks[1] == CHUNKS[1]
         and retrieved_chunks[2] == CHUNKS[0]
     )
     # With reranker
@@ -96,7 +104,7 @@ def test_answer():
         question="Qu'es-ce qu'un chat ?",
         embedding_model="sentence-transformers/all-MiniLM-L12-v2",
         generative_model="tiiuae/Falcon3-1B-Instruct",
-        n_samples=4,
+        n_samples=2,
         path_db=PATH_TMP,
         max_new_tokens=5,
     )
