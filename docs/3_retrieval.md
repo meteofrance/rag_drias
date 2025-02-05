@@ -6,7 +6,7 @@ Retrieval consists of retrieving the most relevant chunks in relation to the que
 We use the BM25 algorithm to retrieve the *k* most relevant chunks from a collection based on a given query by ranking them according to their term frequency and the lenght of the chunk.
 
 *  **Semantic search :**   
-We can use algorithms such the Maximum Marginal Relevance which consists of taking the *k\*2* closest chunks and then selecting the *k* farest chunks from among them.  
+We can use algorithms such as the Maximum Marginal Relevance which consists of taking the *k\*2* closest chunks and then selecting the *k* farest chunks from among them.  
 In our case, we use cosine similarity search to select the chunks closest to the query in the embedding space.
 
 After that, we combine weight the scores of the chunks retrieved by the two methods. So we have at most *2\*k* chunks and we only keep the *k* chunks with the highest scores.
