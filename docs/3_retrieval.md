@@ -9,7 +9,7 @@ We use the BM25 algorithm to retrieve the *k* most relevant chunks from a collec
 We can use algorithms such as the Maximum Marginal Relevance which consists of taking the *k\*2* closest chunks and then selecting the *k* farest chunks from among them.  
 In our case, we use cosine similarity search to select the chunks closest to the query in the embedding space.
 
-After that, we combine weight the scores of the chunks retrieved by the two methods. So we have at most *2\*k* chunks and we only keep the *k* chunks with the highest scores.
+After that, we combine the scores of the chunks retrieved by the two methods. So we have at most *2\*k* chunks and we only keep the *k* chunks with the highest scores.
 
 ## Re-Ranking
 Re-ranking is an additional step that can be performed to enhance the accuracy of the retrieved information. It consists of comparing the similarity between the retrieved chunks and the query in order to only give the user the *k* most relevant chunks.  
