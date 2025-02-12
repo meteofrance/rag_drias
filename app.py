@@ -1,6 +1,10 @@
 import os
+import time
+from pathlib import Path
 
 import streamlit as st
+
+from rag_drias.app_utils import add_json_with_lock
 
 # Add IS_STREAMLIT to the environment
 os.environ["IS_STREAMLIT"] = "True"
@@ -8,23 +12,30 @@ from main import answer  # noqa: E402
 
 correct_password = st.secrets["general"]["password"]
 
+
 if "password_valid" not in st.session_state:
     st.session_state.password_valid = False
 
 # Password protection
 if not st.session_state.password_valid:
+    # ------------ Password protection page -------
+    username = st.text_input("Username")
     password = st.text_input("Password", type="password")
-    if password == correct_password:
+    if username == "" or password == "":
+        st.stop()
+    elif password == correct_password:
+        st.session_state.username = username
         st.session_state.password_valid = True
         st.success("Correct password")
         # Reload the app to show the main interface
         st.rerun()
-    elif password == "":
-        st.stop()
     else:
         st.error("Incorrect password")
         st.stop()
 else:
+    # ------------ Main interface ------------
+
+    # Header
     col1, _, col2 = st.columns([2, 4, 2])
     with col1:
         st.image(
@@ -42,10 +53,12 @@ else:
          chunks* de paragraphes qui ont l'air pertinents pour répondre à la question. Puis une instruction sera donnée\
          au *generative model*: \"voici des documents : [paragraphe 1], [paragraphe 2], etc. A partir de ces documents\
         , répond à la question : [question utilisateur]\".\n\nPour commencer, sélectionnez les paramètres de votre\
-         choix dans la barre latérale puis posez votre question dans la zone de texte ci-dessous."
+         choix dans la barre latérale puis posez votre question dans la zone de texte ci-dessous.\
+        \n\nN'hésitez pas à donner votre avis sur le chatbot en cliquant sur ce \
+        [lien](https://docs.google.com/forms/d/1pT3kqqPp6OiV0XPY7cSPkznasIbgW8tL3UctR-Ox2Kk/edit)."
     )
 
-    # Sidebar
+    # Sidebar with parameters
     st.sidebar.title("Parameters")
 
     use_rag = st.sidebar.checkbox(
@@ -140,11 +153,41 @@ else:
                 alpha=alpha,
             )
 
-            yield response
+            for word in response.split(" "):
+                yield word + " "
+                time.sleep(0.02)
+
+        def save_feedback(index: int):
+            """Save feedback in a json file"""
+            dict_params = {
+                "use_pdf": use_pdf,
+                "use_rag": use_rag,
+                "generative_model": generative_model,
+                "alpha": alpha,
+                "n_samples": n_samples,
+                "reranker_model": reranker_model,
+            }
+            add_json_with_lock(
+                Path("/scratch/shared/rag_drias/user_data/chat_history.json"),
+                {
+                    "username": st.session_state.username,
+                    "query": prompt,
+                    "response": response,
+                    "feedback": st.session_state[f"feedback_{index}"],
+                    "params": dict_params,
+                },
+            )
 
         # Display assistant response in chat message container
         with st.chat_message("assistant"):
             response = st.write_stream(response_generator())
+            # Display stars for feedback
+            selected = st.feedback(
+                "stars",
+                key=f"feedback_{len(st.session_state.messages)}",
+                on_change=save_feedback,
+                args=[len(st.session_state.messages)],
+            )
 
         # Add assistant response to chat history
         st.session_state.messages.append({"role": "assistant", "content": response})

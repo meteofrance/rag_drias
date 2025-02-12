@@ -1,4 +1,5 @@
 import shutil
+import threading
 import warnings
 from pathlib import Path
 from typing import List
@@ -44,6 +45,9 @@ def cache_resource(func):
 
 app = typer.Typer(pretty_exceptions_enable=False)
 
+# ----- Threading Lock -----
+
+lock = threading.Lock()
 
 # ----- Chroma Database -----
 
@@ -183,7 +187,7 @@ def rerank(
     scores = torch.sigmoid(scores).cpu().numpy()
     max_score = scores.max()
     # add a threshold to keep only the most relevant chunks
-    indices = indices[scores > max(max_score**4, 1e-2)]
+    indices = indices[scores > max(max_score**4, 5e-2)]
 
     return [docs[i] for i in indices]
 
@@ -394,13 +398,15 @@ def answer(
     )
     print("#" * 50 + f"\nLLM input:\n{prompt}\n" + "#" * 50)
 
-    sequences = pipeline(
-        prompt,
-        do_sample=True,
-        temperature=0.1,
-        num_return_sequences=1,
-        max_new_tokens=max_new_tokens,
-    )
+    with lock:
+        sequences = pipeline(
+            prompt,
+            do_sample=True,
+            temperature=0.1,
+            num_return_sequences=1,
+            max_new_tokens=max_new_tokens,
+        )
+
     print(f"LLM output:\n{sequences[0]['generated_text'][len(prompt):]}")
     response = sequences[0]["generated_text"][len(prompt) :].split("</think>")[-1]
     return response
