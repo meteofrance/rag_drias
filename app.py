@@ -3,6 +3,7 @@ import time
 from pathlib import Path
 
 import streamlit as st
+from rzg_drias.settings import PATH_FEEDBACK
 
 from rag_drias.app_utils import add_json_with_lock
 
@@ -168,7 +169,7 @@ else:
                 "reranker_model": reranker_model,
             }
             add_json_with_lock(
-                Path("/scratch/shared/rag_drias/user_data/chat_history.json"),
+                PATH_FEEDBACK,
                 {
                     "username": st.session_state.username,
                     "query": prompt,
