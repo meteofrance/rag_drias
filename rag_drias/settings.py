@@ -10,3 +10,5 @@ PATH_DATA = BASE_PATH / "text_data"
 PATH_MENU_JSON = PATH_DATA / "getAllTopSectionsJson.json"
 PATH_DB = BASE_PATH / "database"
 PATH_MODELS = BASE_PATH / "hf_models"
+
+PATH_FEEDBACK = BASE_PATH / "user_data/chat_history.json"
