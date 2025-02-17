@@ -191,6 +191,7 @@ else:
             expender = st.expander(
                 "View retrieved documents", icon=":material/description:"
             )
+            # Display retrieved documents in expander
             with expender:
                 for i, chunk in enumerate(chunks):
                     st.markdown(f"**{chunk.metadata['title']}**")
