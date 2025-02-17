@@ -2,9 +2,9 @@ import os
 import time
 
 import streamlit as st
-from rag_drias.settings import PATH_FEEDBACK
 
 from rag_drias.app_utils import add_json_with_lock
+from rag_drias.settings import PATH_FEEDBACK
 
 # Add IS_STREAMLIT to the environment
 os.environ["IS_STREAMLIT"] = "True"
