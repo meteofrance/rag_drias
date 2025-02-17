@@ -2,7 +2,7 @@ import os
 import time
 
 import streamlit as st
-from rzg_drias.settings import PATH_FEEDBACK
+from rag_drias.settings import PATH_FEEDBACK
 
 from rag_drias.app_utils import add_json_with_lock
 
