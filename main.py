@@ -409,7 +409,7 @@ def answer(
 
     print(f"LLM output:\n{sequences[0]['generated_text'][len(prompt):]}")
     response = sequences[0]["generated_text"][len(prompt) :].split("</think>")[-1]
-    return response
+    return response, chunks
 
 
 if __name__ == "__main__":

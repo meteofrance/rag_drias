@@ -74,7 +74,7 @@ else:
         [
             "Llama-3.2-3B-Instruct",
             "Chocolatine-3B-Instruct-DPO-v1.0",
-            "DeepSeek-R1-Distill-Llama-8B",
+            "Mistral-7B-Instruct-v0.3",
         ],
         help="Modèle de génération de texte utilisé pour répondre aux questions. \nLLama-3.2-3B-Instruct\
              est recommandé.",
@@ -142,17 +142,7 @@ else:
         st.session_state.messages.append({"role": "user", "content": prompt})
 
         # Streamed response emulator
-        def response_generator():
-            response = answer(
-                prompt,
-                generative_model=generative_model,
-                n_samples=n_samples,
-                use_rag=use_rag,
-                reranker=reranker_model,
-                use_pdf=use_pdf,
-                alpha=alpha,
-            )
-
+        def response_generator(response: str):
             for word in response.split(" "):
                 yield word + " "
                 time.sleep(0.02)
@@ -180,7 +170,16 @@ else:
 
         # Display assistant response in chat message container
         with st.chat_message("assistant"):
-            response = st.write_stream(response_generator())
+            response, chunks = answer(
+                prompt,
+                generative_model=generative_model,
+                n_samples=n_samples,
+                use_rag=use_rag,
+                reranker=reranker_model,
+                use_pdf=use_pdf,
+                alpha=alpha,
+            )
+            response = st.write_stream(response_generator(response))
             # Display stars for feedback
             selected = st.feedback(
                 "stars",
@@ -188,6 +187,16 @@ else:
                 on_change=save_feedback,
                 args=[len(st.session_state.messages)],
             )
+            # Display retrieved documents in expander
+            expender = st.expander(
+                "View retrieved documents", icon=":material/description:"
+            )
+            with expender:
+                for i, chunk in enumerate(chunks):
+                    st.markdown(f"**{chunk.metadata['title']}**")
+                    st.write(chunk.metadata["url"])
+                    st.write(chunk.page_content)
+                    st.markdown("---")
 
         # Add assistant response to chat history
         st.session_state.messages.append({"role": "assistant", "content": response})

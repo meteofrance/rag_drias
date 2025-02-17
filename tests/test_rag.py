@@ -100,7 +100,7 @@ def test_query():
 
 
 def test_answer():
-    response = answer(
+    response, _ = answer(
         question="Qu'es-ce qu'un chat ?",
         embedding_model="sentence-transformers/all-MiniLM-L12-v2",
         generative_model="tiiuae/Falcon3-1B-Instruct",
