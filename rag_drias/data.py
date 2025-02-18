@@ -214,12 +214,18 @@ def split_to_chunks(docs) -> list[str]:
         separators=["\n\n", "\n", "* ", "   ", ".", " ", ""],
     )
     chunks = splitter.split_documents(docs)
+
+    chunks = [chunk for chunk in chunks if len(chunk.page_content) > 50]
     for chunk in chunks:
         if chunk.page_content.startswith("."):
             chunk.page_content = re.sub(r"^.\s*", "", chunk.page_content)
 
-    chunks = [chunk for chunk in chunks if len(chunk.page_content) > 30]
-    # TODO : add header to chunks
+        header = chunk.metadata["title"].split(" > ")[-1]
+        for metadata in chunk.metadata:
+            if metadata != "title" and metadata != "url":
+                header += " > " + chunk.metadata[metadata]
+        chunk.page_content = "Titre: " + header + ".  \n" + chunk.page_content
+
     print(f"{len(chunks)} chunks loaded")
     return chunks
 

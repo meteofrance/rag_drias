@@ -165,7 +165,7 @@ def rerank(
     """Returns the k most relevant chunks for the question chosen by a reranker llm."""
     rerank_tokenizer, rerank_model = load_reranker(model_name)
 
-    rerank_inp = [[text, doc.page_content] for doc in docs]
+    rerank_inp = [[text, "\n".join(doc.page_content.split("\n")[1:])] for doc in docs]
     with torch.no_grad():
         inputs = rerank_tokenizer(
             rerank_inp,
@@ -188,6 +188,8 @@ def rerank(
     max_score = scores.max()
     # add a threshold to keep only the most relevant chunks
     indices = indices[scores > max(max_score**4, 5e-2)]
+
+    print(scores[scores > max(max_score**4, 5e-2)])
 
     return [docs[i] for i in indices]
 
@@ -225,7 +227,8 @@ def get_prompt_message(question: str, retrieved_infos: str) -> List[dict]:
                 "content": "Le portail DRIAS (Donner accès aux scénarios climatiques Régionalisés français pour\
  l'Impact et l'Adaptation de nos Sociétés et environnement) mets à disposition les projections climatiques\
  régionalisées de référence, pour l'adaptation en France. Tu es un chatbot qui reponds aux questions à l'aide\
- d'informations récupérées sur le site.",
+ d'informations récupérées sur le site. Si tu ne connais pas la réponse, réponds 'Je n'ai pas la réponse à cette question, essayez de\
+ reformuler votre question.'",
             },
             {
                 "role": "user",
@@ -242,7 +245,8 @@ def get_prompt_message(question: str, retrieved_infos: str) -> List[dict]:
  régionalisées de référence, pour l'adaptation en France. Tu es un chatbot qui reponds uniquement aux questions sur le\
  site. Si une question a aucun rapport avec le site, tu dois répondre 'Je suis le Chatbot du site DRIAS, je\
  peux vous aider à comprendre et à utiliser les projections climatiques régionalisées de référence pour l'adaptation\
- en France.'.",
+ en France.'. Si tu ne connais pas la réponse, réponds 'Je n'ai pas la réponse à cette question, essayez de\
+ reformuler votre question.'.",
             },
             {
                 "role": "user",
@@ -380,6 +384,7 @@ def answer(
     tokenizer, pipeline = load_llm(generative_model)
 
     retrieved_infos = ""
+    chunks = []
     if use_rag:
         vectordb = load_chroma_db(embedding_model, path_db, use_pdf)
         retriever_bm25 = load_bm25_idx(path_db, use_pdf)
