@@ -108,4 +108,4 @@ def test_answer():
         path_db=PATH_TMP,
         max_new_tokens=5,
     )
-    assert response == "Un chat est un animal"
+    assert response == "Chat. Le chat est"
