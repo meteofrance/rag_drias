@@ -12,20 +12,20 @@ PATH_TMP = Path("tmp/")
 
 CHUNKS = [
     Document(
-        page_content="Les trous noirs sont des régions de l'espace où la gravité est\
+        page_content="Titre: Trous noirs.  \nLes trous noirs sont des régions de l'espace où la gravité est\
  si forte que rien, pas même la lumière, ne peut s'en échapper.",
         metadata={"title": "Trous noirs", "url": "https://trous-noirs.com"},
     ),
     Document(
-        page_content="Le chat est un animal domestique de la famille des félidés.",
+        page_content="Titre: Chat.  \nLe chat est un animal domestique de la famille des félidés.",
         metadata={"title": "Chat", "url": "https://chat.com"},
     ),
     Document(
-        page_content="Le chat est un animal domestique de la famille des félidés.",
+        page_content="Titre: Chat.  \nLe chat est un animal domestique de la famille des félidés.",
         metadata={"title": "Chat", "url": "https://chat.com"},
     ),
     Document(
-        page_content="Le chat aime dormir, manger et jouer.",
+        page_content="Titre: Chat.  \nLe chat aime dormir, manger et jouer.",
         metadata={"title": "Chat", "url": "https://chat.com"},
     ),
 ]
@@ -100,7 +100,7 @@ def test_query():
 
 
 def test_answer():
-    response = answer(
+    response, _ = answer(
         question="Qu'es-ce qu'un chat ?",
         embedding_model="sentence-transformers/all-MiniLM-L12-v2",
         generative_model="tiiuae/Falcon3-1B-Instruct",
@@ -108,4 +108,4 @@ def test_answer():
         path_db=PATH_TMP,
         max_new_tokens=5,
     )
-    assert response == "Un chat est un animal"
+    assert response == "Chat. Le chat est"
